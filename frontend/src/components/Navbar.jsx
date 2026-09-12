@@ -158,6 +158,16 @@ export default function Navbar() {
                 >
                   Placement Office & Database
                 </Link>
+                <Link
+                  to="/admin/sql-compiler"
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    location.pathname === '/admin/sql-compiler'
+                      ? 'bg-slate-900 text-white font-semibold'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  SQL Compiler
+                </Link>
               </>
             )}
           </nav>

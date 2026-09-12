@@ -16,11 +16,15 @@ import RecruiterPortal from './pages/RecruiterPortal';
 import RecruiterRegisterPage from './pages/RecruiterRegisterPage';
 import RecruiterSelectCompanyPage from './pages/RecruiterSelectCompanyPage';
 import AdminPortal from './pages/AdminPortal';
+import SqlCompilerPage from './pages/SqlCompilerPage';
 
 function ProtectedRoute({ children, allowedRoles }) {
   const { user } = useAuth();
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+  if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/" replace />;
   }
   return children;
 }
@@ -138,6 +142,16 @@ export default function App() {
               <ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
                 <MainLayout>
                   <AdminPortal />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/sql-compiler"
+            element={
+              <ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
+                <MainLayout>
+                  <SqlCompilerPage />
                 </MainLayout>
               </ProtectedRoute>
             }

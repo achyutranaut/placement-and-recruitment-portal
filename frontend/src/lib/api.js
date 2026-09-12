@@ -443,7 +443,7 @@ export const api = {
     return handleResponse(res);
   },
 
-  // Database Console execution
+  // Database Console execution (legacy presets)
   async executeDatabaseScript({ queryKey, customSql, scriptType, sql }) {
     const res = await fetch(`${BASE_URL}/admin/database-console/execute`, {
       method: 'POST',
@@ -452,6 +452,30 @@ export const api = {
         queryKey: queryKey || scriptType,
         customSql: customSql || sql,
       }),
+    });
+    return handleResponse(res);
+  },
+
+  // Dedicated SQL & PL/SQL Compiler APIs
+  async executeSql({ sql, mode = 'QUERY' }) {
+    const res = await fetch(`${BASE_URL}/admin/sql/execute`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ sql, mode }),
+    });
+    return handleResponse(res);
+  },
+
+  async getSqlSchema() {
+    const res = await fetch(`${BASE_URL}/admin/sql/schema`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(res);
+  },
+
+  async getSqlConnectionInfo() {
+    const res = await fetch(`${BASE_URL}/admin/sql/connection-info`, {
+      headers: getAuthHeaders(),
     });
     return handleResponse(res);
   },

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { formatPackage } from "../lib/formatters";
 import { BarChart, DonutChart } from "../components/Charts";
@@ -683,14 +684,24 @@ export default function AdminPortal() {
         <div className="space-y-8">
           {/* Section A: Interactive DA2 SQL / PLSQL Runner */}
           <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm space-y-5">
-            <div>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
-                <Terminal className="w-4 h-4 text-slate-700" />
-                Interactive Database Console (DA2 Syllabus Demonstrator)
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Executes live SQL joins, aggregation with HAVING, analytic window functions, and PL/SQL packages against the database engine.
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                  <Terminal className="w-4 h-4 text-slate-700" />
+                  Interactive Database Console (DA2 Syllabus Demonstrator)
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Executes live SQL joins, aggregation with HAVING, analytic window functions, and PL/SQL packages against the database engine.
+                </p>
+              </div>
+              <Link
+                to="/admin/sql-compiler"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition-all shadow-sm shrink-0"
+              >
+                <Terminal className="w-4 h-4 text-emerald-400" />
+                <span>Open Dedicated SQL Compiler</span>
+                <ExternalLink className="w-3.5 h-3.5 opacity-75" />
+              </Link>
             </div>
 
             {/* Preset Query Buttons */}
