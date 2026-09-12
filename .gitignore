@@ -23,3 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 .DS_Store
+
+# Maven build output
+backend/target/
+target/
