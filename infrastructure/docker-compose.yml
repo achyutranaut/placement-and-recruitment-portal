@@ -1,0 +1,90 @@
+services:
+  # Oracle Database 23ai Free (Authoritative DB Engine for DA2)
+  oracle-db:
+    image: gvenzl/oracle-free:23-slim
+    container_name: portal-oracle-db
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD:-OraclePassword123!}
+      APP_USER: ${ORACLE_USER:-c##placement_app}
+      APP_USER_PASSWORD: ${ORACLE_PASSWORD:-OraclePassword123!}
+    ports:
+      - "1521:1521"
+    volumes:
+      - oracle_data:/opt/oracle/oradata
+      - ../database/migrations:/container-entrypoint-initdb.d/migrations:ro
+    healthcheck:
+      test: ["CMD-SHELL", "healthcheck.sh"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+    networks:
+      - portal-net
+
+  # Redis Cache & Session Store
+  redis:
+    image: redis:7-alpine
+    container_name: portal-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - portal-net
+
+  # Spring Boot 3.4 Modular Monolith Backend
+  backend:
+    build:
+      context: ..
+      dockerfile: infrastructure/Dockerfile.backend
+    container_name: portal-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: oracle
+      SPRING_DATASOURCE_URL: jdbc:oracle:thin:@oracle-db:1521/FREEPDB1
+      SPRING_DATASOURCE_USERNAME: ${ORACLE_USER:-c##placement_app}
+      SPRING_DATASOURCE_PASSWORD: ${ORACLE_PASSWORD:-OraclePassword123!}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      PORTAL_JWT_SECRET: ${JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+      PORTAL_JWT_EXPIRATION_MS: 86400000
+    ports:
+      - "8080:8080"
+    depends_on:
+      oracle-db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - portal-net
+
+  # Vite React 19 Frontend
+  frontend:
+    build:
+      context: ..
+      dockerfile: infrastructure/Dockerfile.frontend
+    container_name: portal-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - portal-net
+
+  # Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: portal-prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    networks:
+      - portal-net
+
+networks:
+  portal-net:
+    driver: bridge
+
+volumes:
+  oracle_data:
+  redis_data:

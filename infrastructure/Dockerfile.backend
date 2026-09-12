@@ -1,0 +1,29 @@
+# Stage 1: Build JAR with Maven
+FROM maven:3.9.9-eclipse-temurin-21 AS builder
+WORKDIR /app
+
+# Copy POM and download dependencies
+COPY backend/pom.xml .
+RUN mvn dependency:go-offline -B || true
+
+# Copy source code and build production package
+COPY backend/src ./src
+RUN mvn clean package -DskipTests -B
+
+# Stage 2: Runtime Image
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+
+# Add unprivileged user for security
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+COPY --from=builder /app/target/student-placement-recruitment-portal-*.jar app.jar
+
+USER appuser
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1
+
+ENTRYPOINT ["java", "-XX:+EnableDynamicAgentLoading", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
