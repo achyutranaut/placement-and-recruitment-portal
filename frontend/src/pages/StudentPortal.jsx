@@ -18,6 +18,7 @@ import {
   Printer,
   ChevronRight,
   Download,
+  RefreshCw,
 } from 'lucide-react';
 
 export default function StudentPortal() {
@@ -74,6 +75,14 @@ export default function StudentPortal() {
 
   useEffect(() => {
     loadData();
+
+    const handleMutation = () => {
+      loadData();
+    };
+    window.addEventListener('portal:database-mutation', handleMutation);
+    return () => {
+      window.removeEventListener('portal:database-mutation', handleMutation);
+    };
   }, [studentId]);
 
   const handleApply = async (drive) => {
@@ -205,6 +214,16 @@ export default function StudentPortal() {
         >
           <Clock className="w-4 h-4 text-slate-500" /> Applications Tracker
         </a>
+        <button
+          type="button"
+          onClick={loadData}
+          disabled={loading}
+          className="ml-auto px-3 py-2 rounded bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1.5 transition-colors font-bold"
+          title="Reload latest data directly from Oracle Database"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 text-blue-600 ${loading ? 'animate-spin' : ''}`} />
+          <span>Refresh from Oracle</span>
+        </button>
       </div>
 
       {/* Student Profile Card */}

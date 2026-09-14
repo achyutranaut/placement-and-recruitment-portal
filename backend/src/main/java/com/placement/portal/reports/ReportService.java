@@ -121,19 +121,10 @@ public class ReportService {
         }
         long uniqueStudentsPlaced = placedStudentIds.size();
 
-        // Application status breakdown
-        Map<String, Long> statusCounts = new LinkedHashMap<>();
-        statusCounts.put("APPLIED", 0L);
-        statusCounts.put("SHORTLISTED", 0L);
-        statusCounts.put("INTERVIEWING", 0L);
-        statusCounts.put("SELECTED", 0L);
-        statusCounts.put("OFFERED", 0L);
-        statusCounts.put("REJECTED", 0L);
+        // Application status breakdown aggregated directly from Oracle Database via SQL GROUP BY
+        Map<String, Long> statusCounts = reportJdbcDao.getApplicationStatusCounts();
+        totalApps = statusCounts.values().stream().mapToLong(Long::longValue).sum();
 
-        for (Application app : applicationRepository.findAll()) {
-            String st = app.getStatus() != null ? app.getStatus().toUpperCase() : "APPLIED";
-            statusCounts.put(st, statusCounts.getOrDefault(st, 0L) + 1);
-        }
 
         // CTC distribution
         long superDream = allOffers.stream().filter(o -> o.getCtcLpa().doubleValue() >= 20.0).count();

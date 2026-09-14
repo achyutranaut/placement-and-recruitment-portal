@@ -71,6 +71,14 @@ export default function StudentApplicationsPage() {
 
   useEffect(() => {
     loadData();
+
+    const handleMutation = () => {
+      loadData();
+    };
+    window.addEventListener('portal:database-mutation', handleMutation);
+    return () => {
+      window.removeEventListener('portal:database-mutation', handleMutation);
+    };
   }, [studentId]);
 
 

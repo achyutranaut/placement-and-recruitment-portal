@@ -21,13 +21,13 @@ public class PlacementDrive {
     @Column(name = "Min_CGPA", precision = 4, scale = 2, nullable = false)
     private BigDecimal minCgpa;
 
-    @Column(name = "Drive_Date")
+    @Column(name = "Drive_Date", nullable = false)
     private LocalDate driveDate;
 
-    @Column(name = "Application_Deadline")
+    @Column(name = "Application_Deadline", nullable = false)
     private LocalDate applicationDeadline;
 
-    @Column(name = "Openings")
+    @Column(name = "Openings", nullable = false)
     private Integer openings = 10;
 
     @Column(name = "CTC", precision = 10, scale = 2, nullable = false)
@@ -36,13 +36,13 @@ public class PlacementDrive {
     @Column(name = "Job_Description", length = 1000)
     private String jobDescription;
 
-    @Column(name = "Location", length = 100)
+    @Column(name = "Location", length = 100, nullable = false)
     private String location;
 
-    @Column(name = "Eligible_Branches", length = 200)
+    @Column(name = "Eligible_Branches", length = 200, nullable = false)
     private String eligibleBranches;
 
-    @Column(name = "Selection_Process", length = 500)
+    @Column(name = "Selection_Process", length = 500, nullable = false)
     private String selectionProcess;
 
     public PlacementDrive() {}

@@ -21,7 +21,10 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
+import com.placement.portal.company.JobCompany;
 
 @Service
 public class OfferService {
@@ -156,9 +159,7 @@ public class OfferService {
     }
 
     public List<OfferDto> getAllOffers() {
-        return offerRepository.findAll().stream()
-                .map(this::mapToDto)
-                .collect(Collectors.toList());
+        return mapToDtoList(offerRepository.findAll());
     }
 
     public OfferDto getOfferById(String offerId) {
@@ -178,25 +179,31 @@ public class OfferService {
                 .map(Application::getApplicationId)
                 .collect(Collectors.toList());
 
-        return offerRepository.findAll().stream()
-                .filter(ol -> appIds.contains(ol.getApplicationId()))
-                .map(this::mapToDto)
-                .collect(Collectors.toList());
+        if (appIds.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+
+        return mapToDtoList(offerRepository.findByApplicationIdIn(appIds));
     }
 
     /**
      * Accepts a specific employment offer for an authenticated student.
-     * Atomic transaction:
-     * 1. Verifies student ownership
-     * 2. Verifies offer is currently in OFFERED state
-     * 3. Verifies student has not already finalized another offer
-     * 4. Updates selected offer and application to ACCEPTED
-     * 5. Atomically transitions all other active offers for this student to DECLINED
-     * 6. Updates student's placement status to PLACED
-     * 7. Logs full audit trail
+     * Atomic transaction with Oracle row-level pessimistic locking:
+     * 1. Acquires pessimistic write lock on Student row to serialize concurrent requests across cluster
+     * 2. Verifies student ownership
+     * 3. Verifies offer is currently in OFFERED state
+     * 4. Verifies student has not already finalized another offer
+     * 5. Updates selected offer and application to ACCEPTED
+     * 6. Atomically transitions all other active offers for this student to DECLINED
+     * 7. Updates student's placement status to PLACED
+     * 8. Logs full audit trail
      */
     @Transactional
-    public synchronized OfferDto acceptOffer(String offerId, String studentId) {
+    public OfferDto acceptOffer(String offerId, String studentId) {
+        // Acquire pessimistic row lock on Student to serialize concurrent acceptance requests in Oracle
+        Student student = studentRepository.findByIdWithLock(studentId)
+                .orElseThrow(() -> new IllegalArgumentException("Student not found: " + studentId));
+
         OfferLetter offer = offerRepository.findById(offerId)
                 .orElseThrow(() -> new IllegalArgumentException("Offer not found: " + offerId));
 
@@ -216,9 +223,7 @@ public class OfferService {
                 .map(Application::getApplicationId)
                 .toList();
 
-        List<OfferLetter> studentOffers = offerRepository.findAll().stream()
-                .filter(o -> appIds.contains(o.getApplicationId()))
-                .toList();
+        List<OfferLetter> studentOffers = appIds.isEmpty() ? java.util.Collections.emptyList() : offerRepository.findByApplicationIdIn(appIds);
 
         boolean alreadyAccepted = studentOffers.stream()
                 .anyMatch(o -> "ACCEPTED".equalsIgnoreCase(o.getStatus()));
@@ -253,12 +258,87 @@ public class OfferService {
         }
 
         // 4. Update student placement status to PLACED
-        studentRepository.findById(studentId).ifPresent(student -> {
-            student.setPlacementStatus("PLACED");
-            studentRepository.save(student);
-        });
+        student.setPlacementStatus("PLACED");
+        studentRepository.save(student);
 
         return mapToDto(offer);
+    }
+
+    private List<OfferDto> mapToDtoList(List<OfferLetter> offers) {
+        if (offers == null || offers.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+
+        Set<String> appIds = offers.stream().map(OfferLetter::getApplicationId).collect(Collectors.toSet());
+        Map<String, Application> appMap = applicationRepository.findAllById(appIds).stream()
+                .collect(Collectors.toMap(Application::getApplicationId, a -> a, (a, b) -> a));
+
+        Set<String> studentIds = appMap.values().stream().map(Application::getStudentId).collect(Collectors.toSet());
+        Map<String, String> studentNameMap = studentRepository.findAllById(studentIds).stream()
+                .collect(Collectors.toMap(Student::getStudentId, Student::getName, (a, b) -> a));
+
+        Map<String, String> appToDriveId = new java.util.HashMap<>();
+        for (Application a : appMap.values()) {
+            String dId = a.getDriveId();
+            if (dId == null || dId.isBlank()) {
+                var routineOpt = dailyRoutineRepository.findByStudentIdAndApplyDate(a.getStudentId(), a.getApplyDate());
+                if (routineOpt.isPresent()) {
+                    dId = routineOpt.get().getDriveId();
+                }
+            }
+            if (dId != null) {
+                appToDriveId.put(a.getApplicationId(), dId);
+            }
+        }
+
+        Set<String> driveIds = new java.util.HashSet<>(appToDriveId.values());
+        Map<String, PlacementDrive> driveMap = driveRepository.findAllById(driveIds).stream()
+                .collect(Collectors.toMap(PlacementDrive::getDriveId, d -> d, (a, b) -> a));
+
+        Map<String, String> jobToCompanyId = jobCompanyRepository.findAll().stream()
+                .collect(Collectors.toMap(JobCompany::getJobTitle, JobCompany::getCompanyId, (a, b) -> a));
+
+        Map<String, String> compIdToEmail = companyRepository.findAll().stream()
+                .collect(Collectors.toMap(com.placement.portal.company.Company::getCompanyId, com.placement.portal.company.Company::getEmail, (a, b) -> a));
+
+        Map<String, String> emailToName = emailCompanyRepository.findAll().stream()
+                .collect(Collectors.toMap(EmailCompany::getEmail, EmailCompany::getCompanyName, (a, b) -> a));
+
+        return offers.stream().map(ol -> {
+            String studentId = "";
+            String studentName = "Student";
+            String driveId = "";
+            String jobTitle = "Campus Placement Position";
+            String companyName = "Corporate Recruiter";
+
+            Application app = appMap.get(ol.getApplicationId());
+            if (app != null) {
+                studentId = app.getStudentId();
+                studentName = studentNameMap.getOrDefault(studentId, "Student");
+                driveId = appToDriveId.getOrDefault(app.getApplicationId(), "");
+                PlacementDrive drv = driveMap.get(driveId);
+                if (drv != null) {
+                    jobTitle = drv.getJobTitle();
+                    String compId = jobToCompanyId.getOrDefault(jobTitle, "");
+                    String email = compIdToEmail.getOrDefault(compId, "");
+                    companyName = emailToName.getOrDefault(email, "Corporate Recruiter");
+                }
+            }
+
+            return new OfferDto(
+                    ol.getOfferId(),
+                    ol.getApplicationId(),
+                    studentId,
+                    studentName,
+                    jobTitle,
+                    companyName,
+                    ol.getOfferDate(),
+                    ol.getCtcLpa(),
+                    ol.getStatus() != null ? ol.getStatus() : "OFFERED",
+                    ol.getAcceptedAt(),
+                    driveId
+            );
+        }).collect(Collectors.toList());
     }
 
     private OfferDto mapToDto(OfferLetter ol) {

@@ -39,4 +39,12 @@ public class SqlCompilerController {
         DatabaseConnectionInfoDto info = sqlCompilerService.getConnectionInfo();
         return ResponseEntity.ok(ApiResponse.ok(info));
     }
+
+    @GetMapping("/history")
+    @Operation(summary = "Fetch Oracle-backed SQL/PLSQL execution audit history")
+    public ResponseEntity<ApiResponse<java.util.List<SqlExecutionAuditDto>>> getExecutionHistory(
+            @RequestParam(name = "limit", defaultValue = "50") int limit) {
+        java.util.List<SqlExecutionAuditDto> history = sqlCompilerService.getExecutionHistory(limit);
+        return ResponseEntity.ok(ApiResponse.ok(history));
+    }
 }

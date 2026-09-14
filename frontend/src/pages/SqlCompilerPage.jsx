@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import SqlEditor from '../components/SqlEditor';
@@ -13,6 +13,8 @@ import {
   Zap,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
+  ShieldAlert,
   History,
   BookOpen,
   ChevronRight,
@@ -26,53 +28,101 @@ import {
 } from 'lucide-react';
 
 const SAMPLE_QUERIES = [
+  // 1. DQL (QUERIES)
   {
     category: 'DQL (Queries)',
-    title: 'Select High CGPA Students',
-    sql: `-- Select students with CGPA >= 8.5 ordered by merit
-SELECT Student_Id, Name, CGPA, Branch, Registration_No
+    title: 'DQL — High CGPA Students',
+    sql: `-- Select students meeting top-tier placement criteria (CGPA >= 8.5)
+SELECT Student_Id, Name, Email, CGPA, Branch, Program_Id
 FROM STUDENT
 WHERE CGPA >= 8.50
 ORDER BY CGPA DESC;`,
   },
   {
     category: 'DQL (Queries)',
-    title: 'Active Placement Drives Catalog',
-    sql: `-- View all active placement drives and packages
-SELECT Drive_Id, Company_Name, Job_Title, Min_CGPA, Package_LPA, Openings, Application_Deadline
-FROM PLACEMENT_DRIVE
-ORDER BY Package_LPA DESC;`,
-  },
-  {
-    category: 'JOINS',
-    title: '5-Table Relational Placement JOIN',
-    sql: `-- Multi-table relational join linking candidate to application, drive, and corporate partner
-SELECT s.Student_Id, s.Name AS Candidate, s.CGPA,
-       a.Application_Id, a.Status,
-       d.Drive_Id, d.Job_Title,
-       c.Company_Name, c.Industry
-FROM STUDENT s
-JOIN APPLICATION a ON s.Student_Id = a.Student_Id
-JOIN STUDENT_DAILY_ROUTINE_DRIVE sdr ON a.Student_Id = sdr.Student_Id AND a.Apply_Date = sdr.Apply_Date
-JOIN PLACEMENT_DRIVE d ON sdr.Drive_Id = d.Drive_Id
+    title: 'DQL — Active Placement Drives Catalog',
+    sql: `-- View active campus drives with corporate partner names, eligibility, and packages
+SELECT d.Drive_Id, ec.Company_Name, d.Job_Title, d.Min_CGPA, d.CTC AS Package_LPA, d.Openings, d.Application_Deadline
+FROM PLACEMENT_DRIVE d
 JOIN JOB_COMPANY jc ON d.Job_Title = jc.Job_Title
 JOIN COMPANY c ON jc.Company_Id = c.Company_Id
+JOIN EMAIL_COMPANY ec ON c.Email = ec.Email
+ORDER BY d.CTC DESC;`,
+  },
+  {
+    category: 'DQL (Queries)',
+    title: 'DQL — Distinct Branches & Placement Statuses',
+    sql: `-- Demonstrates SELECT DISTINCT across participating placement departments
+SELECT DISTINCT Branch, Placement_Status
+FROM STUDENT
+WHERE Branch IS NOT NULL
+ORDER BY Branch;`,
+  },
+
+  // 2. JOINS
+  {
+    category: 'JOINS',
+    title: 'JOIN — Multi-Table Relational Placement Journey',
+    sql: `-- 5-table relational join linking candidate, application, drive, job role, and corporate partner
+SELECT s.Student_Id, s.Name AS Candidate, s.CGPA,
+       a.Application_Id, a.Status AS App_Status,
+       d.Drive_Id, d.Job_Title, d.CTC AS Package_LPA,
+       ec.Company_Name, c.Industry
+FROM STUDENT s
+JOIN APPLICATION a ON s.Student_Id = a.Student_Id
+JOIN PLACEMENT_DRIVE d ON a.Drive_Id = d.Drive_Id
+JOIN JOB_COMPANY jc ON d.Job_Title = jc.Job_Title
+JOIN COMPANY c ON jc.Company_Id = c.Company_Id
+JOIN EMAIL_COMPANY ec ON c.Email = ec.Email
 ORDER BY a.Apply_Date DESC;`,
   },
   {
+    category: 'JOINS',
+    title: 'JOIN — Left Outer Join for Drive Application Coverage',
+    sql: `-- Left Outer Join displaying all campus drives even if no candidate applications have been filed
+SELECT d.Drive_Id, d.Job_Title, d.CTC AS Package_LPA,
+       a.Application_Id, a.Student_Id, a.Status
+FROM PLACEMENT_DRIVE d
+LEFT JOIN APPLICATION a ON d.Drive_Id = a.Drive_Id
+ORDER BY d.Drive_Id, a.Application_Id;`,
+  },
+
+  // 3. AGGREGATION
+  {
     category: 'AGGREGATION',
-    title: 'GROUP BY & HAVING Summary',
-    sql: `-- Aggregates student registration count by branch with HAVING filter
-SELECT Branch, COUNT(*) AS Total_Students, ROUND(AVG(CGPA), 2) AS Average_CGPA
+    title: 'AGGREGATION — Academic Metrics by Branch (GROUP BY & HAVING)',
+    sql: `-- Aggregates candidate count, average, minimum, and maximum CGPA per branch with HAVING filter
+SELECT Branch,
+       COUNT(*) AS Total_Students,
+       ROUND(AVG(CGPA), 2) AS Average_CGPA,
+       MIN(CGPA) AS Min_CGPA,
+       MAX(CGPA) AS Max_CGPA
 FROM STUDENT
+WHERE Branch IS NOT NULL
 GROUP BY Branch
 HAVING COUNT(*) >= 1
 ORDER BY Average_CGPA DESC;`,
   },
   {
+    category: 'AGGREGATION',
+    title: 'AGGREGATION — Recruitment Intake & Compensation Statistics',
+    sql: `-- Summarizes recruitment capacity and compensation metrics across job titles
+SELECT d.Job_Title,
+       COUNT(*) AS Drive_Count,
+       SUM(d.Openings) AS Total_Openings,
+       ROUND(AVG(d.CTC), 2) AS Average_CTC,
+       MAX(d.CTC) AS Peak_CTC
+FROM PLACEMENT_DRIVE d
+GROUP BY d.Job_Title
+HAVING AVG(d.CTC) >= 10.00
+ORDER BY Average_CTC DESC;`,
+  },
+
+  // 4. SUBQUERIES
+  {
     category: 'SUBQUERIES',
-    title: 'Correlated Subquery (EXISTS)',
-    sql: `-- Select students who have actively applied for at least one placement drive
+    title: 'SUBQUERY — Candidates with Active Applications (EXISTS)',
+    sql: `-- Correlated subquery selecting students who have applied for at least one placement drive
 SELECT s.Student_Id, s.Name, s.Email, s.CGPA
 FROM STUDENT s
 WHERE EXISTS (
@@ -82,91 +132,258 @@ WHERE EXISTS (
 );`,
   },
   {
-    category: 'DML',
-    title: 'Temporary Table CRUD Lifecycle',
-    sql: `-- 1. Create a test table
-CREATE TABLE SQL_COMPILER_TEST (
-    ID NUMBER PRIMARY KEY,
-    NAME VARCHAR2(100),
-    CREATED_AT DATE DEFAULT SYSDATE
-);
-
--- 2. Insert test rows
-INSERT INTO SQL_COMPILER_TEST (ID, NAME) VALUES (1, 'DBMS DA2 Demonstration');
-INSERT INTO SQL_COMPILER_TEST (ID, NAME) VALUES (2, 'Oracle 23c Verification');
-
--- 3. Verify inserted rows
-SELECT * FROM SQL_COMPILER_TEST;`,
+    category: 'SUBQUERIES',
+    title: 'SUBQUERY — High Intake Recruitment Drives (IN)',
+    sql: `-- Nested scalar subquery isolating placement drives offering above-average intake openings
+SELECT Drive_Id, Job_Title, Min_CGPA, CTC AS Package_LPA, Openings
+FROM PLACEMENT_DRIVE
+WHERE Drive_Id IN (
+    SELECT Drive_Id
+    FROM PLACEMENT_DRIVE
+    WHERE Openings >= (SELECT AVG(Openings) FROM PLACEMENT_DRIVE)
+)
+ORDER BY Openings DESC;`,
   },
   {
+    category: 'SUBQUERIES',
+    title: 'SUBQUERY — Students Above Branch Average CGPA (Correlated)',
+    sql: `-- Correlated subquery evaluating each student's CGPA against their branch average
+SELECT s.Student_Id, s.Name, s.Branch, s.CGPA
+FROM STUDENT s
+WHERE s.CGPA >= (
+    SELECT AVG(s2.CGPA)
+    FROM STUDENT s2
+    WHERE s2.Branch = s.Branch
+)
+ORDER BY s.Branch, s.CGPA DESC;`,
+  },
+
+  // 5. SET OPERATIONS
+  {
+    category: 'SET OPERATIONS',
+    title: 'SET OPERATIONS — Candidate Cohort Union (UNION)',
+    sql: `-- Combines distinct candidate subsets: high-merit students and B.Tech CSE candidates
+SELECT Student_Id, Name, 'High Merit' AS Cohort
+FROM STUDENT
+WHERE CGPA >= 9.00
+UNION
+SELECT Student_Id, Name, 'B.Tech CSE' AS Cohort
+FROM STUDENT
+WHERE Program_Id = 'BTECH-CSE'
+ORDER BY Student_Id;`,
+  },
+  {
+    category: 'SET OPERATIONS',
+    title: 'SET OPERATIONS — High Merit Applicants Intersection (INTERSECT)',
+    sql: `-- Identifies students who achieve high academic merit AND have submitted placement applications
+SELECT Student_Id FROM STUDENT WHERE CGPA >= 8.50
+INTERSECT
+SELECT Student_Id FROM APPLICATION;`,
+  },
+  {
+    category: 'SET OPERATIONS',
+    title: 'SET OPERATIONS — Unapplied Candidates Difference (MINUS)',
+    sql: `-- Computes difference set between all registered students and candidates who applied
+SELECT Student_Id, Name FROM STUDENT
+MINUS
+SELECT s.Student_Id, s.Name FROM STUDENT s JOIN APPLICATION a ON s.Student_Id = a.Student_Id;`,
+  },
+
+  // 6. DML (SAFE DEMONSTRATION)
+  {
+    category: 'DML',
+    title: 'DML — Safe Demonstration Student Lifecycle (INSERT/SELECT/UPDATE/DELETE)',
+    sql: `-- Safe Demonstration DML — Strict NOT-NULL Guard Compliant (Mode: SCRIPT)
+-- 1. Insert test candidate providing all mandatory NOT NULL columns without default
+INSERT INTO STUDENT (
+    Student_Id, Name, Email, DOB, Program_Id, Branch, CGPA
+) VALUES (
+    'STU_DEMO_999',
+    'Arun Kumar',
+    'arun.kumar2026@vitstudent.ac.in',
+    TO_DATE('2004-05-15', 'YYYY-MM-DD'),
+    'BTECH-CSE',
+    'Computer Science and Engineering',
+    8.75
+);
+
+-- 2. Verify inserted candidate in Oracle
+SELECT Student_Id, Name, Email, CGPA, Branch, Program_Id
+FROM STUDENT
+WHERE Student_Id = 'STU_DEMO_999';
+
+-- 3. Safe update respecting CHECK constraints and non-null rules
+UPDATE STUDENT
+SET CGPA = 9.10
+WHERE Student_Id = 'STU_DEMO_999';
+
+-- 4. Clean up demonstration record to preserve database integrity
+DELETE FROM STUDENT
+WHERE Student_Id = 'STU_DEMO_999';
+
+COMMIT;`,
+  },
+  {
+    category: 'DML',
+    title: 'DML — Safe Single-Record Drive Capacity UPDATE',
+    sql: `-- Safe Demonstration DML — Updates recruitment intake capacity for an active drive
+UPDATE PLACEMENT_DRIVE
+SET Openings = 15
+WHERE Drive_Id = 'DRV001';
+
+-- Verify updated capacity
+SELECT Drive_Id, Job_Title, CTC AS Package_LPA, Openings
+FROM PLACEMENT_DRIVE
+WHERE Drive_Id = 'DRV001';`,
+  },
+
+  // 7. DDL
+  {
+    category: 'DDL',
+    title: 'DDL — Safe Demonstration Table Lifecycle (CREATE/INSPECT/DROP)',
+    sql: `-- Safe Demonstration DDL (Mode: SCRIPT)
+-- 1. Create demonstration table in Oracle schema
+CREATE TABLE DEMO_INTERVIEW_NOTE (
+    Note_Id    NUMBER PRIMARY KEY,
+    Note_Title VARCHAR2(100) NOT NULL,
+    Drive_Id   VARCHAR2(20) NOT NULL,
+    Created_At DATE DEFAULT SYSDATE NOT NULL
+);
+
+-- 2. Inspect created table metadata from USER_TAB_COLUMNS
+SELECT Column_Name, Data_Type, Data_Length, Nullable
+FROM USER_TAB_COLUMNS
+WHERE Table_Name = 'DEMO_INTERVIEW_NOTE'
+ORDER BY Column_Id;
+
+-- 3. Cleanly drop demonstration table
+DROP TABLE DEMO_INTERVIEW_NOTE;`,
+  },
+
+  // 8. TCL
+  {
+    category: 'TCL',
+    title: 'TCL — Transaction SAVEPOINT & ROLLBACK Scenario',
+    sql: `-- Transaction Control Language Demonstration (Mode: SCRIPT)
+SAVEPOINT demo_point;
+
+-- 1. Attempt in-flight update on demonstration candidate
+UPDATE STUDENT
+SET CGPA = 9.50
+WHERE Student_Id = 'STU024';
+
+-- 2. View modified in-flight row state
+SELECT Student_Id, Name, CGPA
+FROM STUDENT
+WHERE Student_Id = 'STU024';
+
+-- 3. Rollback uncommitted changes back to savepoint
+ROLLBACK TO demo_point;
+
+-- 4. Verify original CGPA restored cleanly
+SELECT Student_Id, Name, CGPA
+FROM STUDENT
+WHERE Student_Id = 'STU024';`,
+  },
+
+  // 9. PL/SQL
+  {
     category: 'PL/SQL',
-    title: 'Anonymous PL/SQL Block with DBMS_OUTPUT',
-    sql: `DECLARE
-    v_total_students NUMBER := 0;
-    v_total_drives   NUMBER := 0;
+    title: 'PL/SQL — Placement Statistics & Drive Health Evaluation',
+    sql: `-- Anonymous PL/SQL Block with variables, SELECT INTO, conditional logic, and DBMS_OUTPUT
+DECLARE
+    v_total_students   NUMBER := 0;
+    v_total_drives     NUMBER := 0;
+    v_placed_students  NUMBER := 0;
+    v_avg_ctc          NUMBER := 0;
+    v_placement_rate   NUMBER := 0;
+    v_health_status    VARCHAR2(50);
 BEGIN
     SELECT COUNT(*) INTO v_total_students FROM STUDENT;
     SELECT COUNT(*) INTO v_total_drives FROM PLACEMENT_DRIVE;
+    SELECT COUNT(*) INTO v_placed_students FROM STUDENT WHERE Placement_Status = 'PLACED';
+    SELECT NVL(ROUND(AVG(CTC), 2), 0) INTO v_avg_ctc FROM PLACEMENT_DRIVE;
+
+    IF v_total_students > 0 THEN
+        v_placement_rate := ROUND((v_placed_students / v_total_students) * 100, 2);
+    ELSE
+        v_placement_rate := 0;
+    END IF;
+
+    IF v_placement_rate >= 50.0 THEN
+        v_health_status := 'OPTIMAL RECRUITMENT METRIC';
+    ELSE
+        v_health_status := 'ONGOING RECRUITMENT CYCLE';
+    END IF;
 
     DBMS_OUTPUT.PUT_LINE('==================================================');
-    DBMS_OUTPUT.PUT_LINE('   VIT PLACEMENT & TRAINING CELL — ORACLE ENGINE');
+    DBMS_OUTPUT.PUT_LINE('   VIT PLACEMENT & RECRUITMENT CELL — ORACLE ENGINE');
     DBMS_OUTPUT.PUT_LINE('==================================================');
     DBMS_OUTPUT.PUT_LINE('Total Registered Students : ' || v_total_students);
-    DBMS_OUTPUT.PUT_LINE('Active Campus Drives      : ' || v_total_drives);
-    DBMS_OUTPUT.PUT_LINE('PL/SQL Engine Status      : OPERATIONAL');
+    DBMS_OUTPUT.PUT_LINE('Active Recruitment Drives : ' || v_total_drives);
+    DBMS_OUTPUT.PUT_LINE('Placed Candidates         : ' || v_placed_students);
+    DBMS_OUTPUT.PUT_LINE('Average Drive CTC (LPA)   : ' || v_avg_ctc || ' LPA');
+    DBMS_OUTPUT.PUT_LINE('Placement Success Rate    : ' || v_placement_rate || '%');
+    DBMS_OUTPUT.PUT_LINE('Recruitment Campaign State: ' || v_health_status);
     DBMS_OUTPUT.PUT_LINE('==================================================');
 END;
 /`,
   },
   {
-    category: 'CURSORS',
-    title: 'Explicit Cursor Traversal & DBMS_OUTPUT',
-    sql: `DECLARE
+    category: 'PL/SQL',
+    title: 'PL/SQL — Explicit Cursor Roster Traversal',
+    sql: `-- Explicit Cursor Traversal with %ROWTYPE, %NOTFOUND, %ROWCOUNT, and DBMS_OUTPUT
+DECLARE
     CURSOR c_students IS
-        SELECT Student_Id, Name, CGPA
+        SELECT Student_Id, Name, CGPA, Branch, Placement_Status
         FROM STUDENT
         ORDER BY CGPA DESC;
-    v_id   STUDENT.Student_Id%TYPE;
-    v_name STUDENT.Name%TYPE;
-    v_cgpa STUDENT.CGPA%TYPE;
+    v_stu c_students%ROWTYPE;
 BEGIN
-    DBMS_OUTPUT.PUT_LINE('Candidate Merit Roster (Cursor Loop):');
+    DBMS_OUTPUT.PUT_LINE('==================================================');
+    DBMS_OUTPUT.PUT_LINE('         STUDENT MERIT ROSTER (CURSOR LOOP)       ');
+    DBMS_OUTPUT.PUT_LINE('==================================================');
     OPEN c_students;
     LOOP
-        FETCH c_students INTO v_id, v_name, v_cgpa;
+        FETCH c_students INTO v_stu;
         EXIT WHEN c_students%NOTFOUND;
-        DBMS_OUTPUT.PUT_LINE(' • [' || v_id || '] ' || v_name || ' | CGPA: ' || TO_CHAR(v_cgpa, 'FM90.00'));
+        DBMS_OUTPUT.PUT_LINE(' • [' || v_stu.Student_Id || '] ' || RPAD(v_stu.Name, 20) ||
+                             ' | CGPA: ' || TO_CHAR(v_stu.CGPA, 'FM90.00') ||
+                             ' | Status: ' || v_stu.Placement_Status);
     END LOOP;
-    DBMS_OUTPUT.PUT_LINE('Total Rows Processed: ' || c_students%ROWCOUNT);
+    DBMS_OUTPUT.PUT_LINE('--------------------------------------------------');
+    DBMS_OUTPUT.PUT_LINE('Total Processed Candidates: ' || c_students%ROWCOUNT);
+    DBMS_OUTPUT.PUT_LINE('==================================================');
     CLOSE c_students;
 END;
 /`,
   },
   {
-    category: 'TCL',
-    title: 'Transaction SAVEPOINT & ROLLBACK Scenario',
-    sql: `-- Transaction Demonstration
-SAVEPOINT demo_point;
+    category: 'PL/SQL',
+    title: 'PL/SQL — Invocation of Stored Function (GET_AVERAGE_PACKAGE)',
+    sql: `-- Invocation of real Oracle stored function GET_AVERAGE_PACKAGE with DBMS_OUTPUT logging
+DECLARE
+    v_it_avg_ctc     NUMBER;
+    v_global_avg_ctc NUMBER;
+BEGIN
+    v_it_avg_ctc := GET_AVERAGE_PACKAGE('IT Services & Consulting');
+    v_global_avg_ctc := GET_AVERAGE_PACKAGE(NULL);
 
--- Attempt an update
-UPDATE STUDENT
-SET CGPA = 9.99
-WHERE Student_Id = 'STU023';
-
--- View changed row
-SELECT Student_Id, Name, CGPA FROM STUDENT WHERE Student_Id = 'STU023';
-
--- Rollback change back to savepoint
-ROLLBACK TO demo_point;
-
--- Verify original CGPA restored
-SELECT Student_Id, Name, CGPA FROM STUDENT WHERE Student_Id = 'STU023';`,
+    DBMS_OUTPUT.PUT_LINE('==================================================');
+    DBMS_OUTPUT.PUT_LINE('       ORACLE STORED FUNCTION ANALYTICS           ');
+    DBMS_OUTPUT.PUT_LINE('==================================================');
+    DBMS_OUTPUT.PUT_LINE('IT Services Average CTC : ' || v_it_avg_ctc || ' LPA');
+    DBMS_OUTPUT.PUT_LINE('All Sectors Average CTC : ' || v_global_avg_ctc || ' LPA');
+    DBMS_OUTPUT.PUT_LINE('==================================================');
+END;
+/`,
   },
 ];
 
 export default function SqlCompilerPage() {
   const [sql, setSql] = useState('SELECT * FROM STUDENT;');
   const [mode, setMode] = useState('QUERY');
+  const [strictMode, setStrictMode] = useState(true);
   const [executing, setExecuting] = useState(false);
   const [result, setResult] = useState(null);
   const [selectedStatementIdx, setSelectedStatementIdx] = useState('all'); // 'all' or number (0, 1, 2...)
@@ -181,22 +398,21 @@ export default function SqlCompilerPage() {
   const [expandedTables, setExpandedTables] = useState({});
   const [activeSchemaTab, setActiveSchemaTab] = useState('tables'); // 'tables', 'views', 'procedures', 'triggers'
 
-  // Query History
-  const [history, setHistory] = useState([]);
+  // Oracle-backed Query Execution Audit History
+  const [oracleHistory, setOracleHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
+  const [historyFilter, setHistoryFilter] = useState('');
+  const [historyStatusFilter, setHistoryStatusFilter] = useState('ALL'); // 'ALL', 'SUCCESS', 'ERROR'
 
   // Active Sidebar View
   const [sidebarView, setSidebarView] = useState('schema'); // 'schema', 'samples', 'history'
 
-  // Load connection info and schema metadata on mount
+  // Load connection info, schema metadata, and audit history on mount
   useEffect(() => {
     loadConnectionInfo();
     loadSchema();
-    const saved = localStorage.getItem('sql_compiler_history');
-    if (saved) {
-      try {
-        setHistory(JSON.parse(saved));
-      } catch (e) {}
-    }
+    loadOracleHistory();
   }, []);
 
   const loadConnectionInfo = async () => {
@@ -220,6 +436,59 @@ export default function SqlCompilerPage() {
     }
   };
 
+  const loadOracleHistory = async () => {
+    try {
+      setHistoryLoading(true);
+      setHistoryError(null);
+      const data = await api.getSqlHistory(50);
+      setOracleHistory(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Failed to load Oracle execution history:', err);
+      setHistoryError(err?.message || 'Failed to load Oracle execution history.');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleQuickAdminLogin = async () => {
+    try {
+      setHistoryLoading(true);
+      await api.login('admin', 'admin123');
+      setHistoryError(null);
+      await Promise.allSettled([loadOracleHistory(), loadSchema(), loadConnectionInfo()]);
+    } catch (err) {
+      setHistoryError('Failed to sign in as admin: ' + (err?.message || err));
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const formatAuditTimestamp = (ts) => {
+    if (!ts) return '';
+    try {
+      const d = new Date(ts);
+      if (isNaN(d.getTime())) return String(ts).substring(11, 19);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    } catch (_) {
+      return '';
+    }
+  };
+
+  const filteredHistory = useMemo(() => {
+    return oracleHistory.filter((h) => {
+      if (historyStatusFilter === 'SUCCESS' && h.status !== 'SUCCESS') return false;
+      if (historyStatusFilter === 'ERROR' && h.status === 'SUCCESS') return false;
+      if (!historyFilter.trim()) return true;
+      const q = historyFilter.toLowerCase();
+      return (
+        (h.sqlText && h.sqlText.toLowerCase().includes(q)) ||
+        (h.statementType && h.statementType.toLowerCase().includes(q)) ||
+        (h.adminId && h.adminId.toLowerCase().includes(q)) ||
+        (h.errorCode && h.errorCode.toLowerCase().includes(q))
+      );
+    });
+  }, [oracleHistory, historyFilter, historyStatusFilter]);
+
   const handleRun = async (overrideSql) => {
     const textToRun = typeof overrideSql === 'string' && overrideSql.trim() ? overrideSql.trim() : sql.trim();
     if (!textToRun || executing) return;
@@ -229,23 +498,23 @@ export default function SqlCompilerPage() {
       setResult(null);
       setSelectedStatementIdx('all');
 
-      const res = await api.executeSql({ sql: textToRun, mode });
+      const res = await api.executeSql({ sql: textToRun, mode, strictMode });
       setResult(res);
 
-      // Add to history
-      const newHistory = [
-        {
-          id: Date.now(),
-          sql: textToRun,
-          mode,
-          timestamp: new Date().toLocaleTimeString(),
-          success: res.success,
-          statementType: res.statementType,
-        },
-        ...history.slice(0, 49),
-      ];
-      setHistory(newHistory);
-      localStorage.setItem('sql_compiler_history', JSON.stringify(newHistory));
+      // Immediately refresh live execution history from Oracle
+      loadOracleHistory();
+
+      // Dispatch global mutation event so Student, Recruiter, and Admin portals reflect any database changes immediately
+      if (res.success && ['INSERT', 'UPDATE', 'DELETE', 'MERGE'].includes(res.statementType?.toUpperCase())) {
+        window.dispatchEvent(new CustomEvent('portal:database-mutation', {
+          detail: { statementType: res.statementType, sql: textToRun, timestamp: Date.now() }
+        }));
+        try {
+          const channel = new BroadcastChannel('portal-database-channel');
+          channel.postMessage({ statementType: res.statementType, sql: textToRun, timestamp: Date.now() });
+          channel.close();
+        } catch (_) {}
+      }
 
       // If DDL was run, refresh schema metadata
       const upper = textToRun.toUpperCase();
@@ -274,6 +543,7 @@ export default function SqlCompilerPage() {
       });
     } finally {
       setExecuting(false);
+      loadOracleHistory();
     }
   };
 
@@ -291,13 +561,12 @@ export default function SqlCompilerPage() {
 
   const handleLoadSample = (sampleSql) => {
     setSql(sampleSql);
-    // If sample contains multiple statements or PL/SQL with slash, set to appropriate mode
-    if (sampleSql.includes('/') || (sampleSql.match(/;/g) || []).length > 1) {
-      if (sampleSql.includes('/') && !sampleSql.includes('CREATE TABLE')) {
-        setMode('QUERY');
-      } else if ((sampleSql.match(/;/g) || []).length > 1) {
-        setMode('SCRIPT');
-      }
+    const cleaned = sampleSql.replace(/--[^\n]*/g, '').trim();
+    const isPlsql = /^\s*(DECLARE|BEGIN)/i.test(cleaned);
+    if (isPlsql) {
+      setMode('QUERY');
+    } else if ((cleaned.match(/;/g) || []).length > 1) {
+      setMode('SCRIPT');
     } else {
       setMode('QUERY');
     }
@@ -496,7 +765,10 @@ export default function SqlCompilerPage() {
             </button>
             <button
               type="button"
-              onClick={() => setSidebarView('history')}
+              onClick={() => {
+                setSidebarView('history');
+                loadOracleHistory();
+              }}
               className={`flex-1 py-2.5 px-3 flex items-center justify-center gap-1.5 border-b-2 transition-colors ${
                 sidebarView === 'history'
                   ? 'border-slate-900 text-slate-900 bg-white'
@@ -504,7 +776,7 @@ export default function SqlCompilerPage() {
               }`}
             >
               <History className="w-3.5 h-3.5" />
-              <span>History ({history.length})</span>
+              <span>History ({oracleHistory.length})</span>
             </button>
           </div>
 
@@ -598,7 +870,9 @@ export default function SqlCompilerPage() {
                                   <tr className="text-slate-400 border-b border-slate-100 text-left">
                                     <th className="pb-1 font-semibold">Column</th>
                                     <th className="pb-1 font-semibold">Type</th>
-                                    <th className="pb-1 font-semibold">Key</th>
+                                    <th className="pb-1 font-semibold">Nullable</th>
+                                    <th className="pb-1 font-semibold">Key/Attrs</th>
+                                    <th className="pb-1 font-semibold">Default</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
@@ -611,7 +885,18 @@ export default function SqlCompilerPage() {
                                         {col.dataType}
                                         {col.dataLength ? `(${col.dataLength})` : ''}
                                       </td>
-                                      <td className="py-1">
+                                      <td className="py-1 pr-2">
+                                        {col.nullable === false ? (
+                                          <span className="px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 text-[9px] font-extrabold" title="Mandatory NOT NULL Column">
+                                            NOT NULL
+                                          </span>
+                                        ) : (
+                                          <span className="px-1.5 py-0.5 rounded bg-slate-50 text-slate-500 border border-slate-200 text-[9px] font-medium" title="Nullable Column">
+                                            NULLABLE
+                                          </span>
+                                        )}
+                                      </td>
+                                      <td className="py-1 pr-2">
                                         {col.primaryKey && (
                                           <span className="px-1 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-200 text-[9px] font-bold mr-1">
                                             PK
@@ -619,17 +904,43 @@ export default function SqlCompilerPage() {
                                         )}
                                         {col.foreignKeyRef && (
                                           <span
-                                            className="px-1 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200 text-[9px] font-medium"
+                                            className="px-1 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200 text-[9px] font-medium mr-1"
                                             title={`References ${col.foreignKeyRef}`}
                                           >
                                             FK
                                           </span>
                                         )}
+                                        {col.isUnique && (
+                                          <span className="px-1 py-0.2 rounded bg-purple-50 text-purple-700 border border-purple-200 text-[9px] font-bold mr-1">
+                                            UQ
+                                          </span>
+                                        )}
+                                      </td>
+                                      <td className="py-1 text-slate-500 text-[10px] truncate max-w-[80px]" title={col.dataDefault}>
+                                        {col.dataDefault || '—'}
                                       </td>
                                     </tr>
                                   ))}
                                 </tbody>
                               </table>
+
+                              {/* Unique & Check Constraints */}
+                              {((t.checkConstraints && t.checkConstraints.length > 0) || (t.uniqueConstraints && t.uniqueConstraints.length > 0)) && (
+                                <div className="mt-2 pt-2 border-t border-slate-100 space-y-1 text-[10px] font-mono">
+                                  {t.checkConstraints && t.checkConstraints.map((cc, idx) => (
+                                    <div key={idx} className="text-slate-600 bg-amber-50/50 p-1 rounded border border-amber-100 flex items-start gap-1">
+                                      <span className="font-bold text-amber-700 shrink-0">CHECK:</span>
+                                      <span className="truncate">{cc.searchCondition || cc.constraintName}</span>
+                                    </div>
+                                  ))}
+                                  {t.uniqueConstraints && t.uniqueConstraints.map((uc, idx) => (
+                                    <div key={idx} className="text-slate-600 bg-purple-50/50 p-1 rounded border border-purple-100 flex items-start gap-1">
+                                      <span className="font-bold text-purple-700 shrink-0">UNIQUE:</span>
+                                      <span className="truncate">{uc.constraintName} ({(uc.columns || []).join(', ')})</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -756,53 +1067,180 @@ export default function SqlCompilerPage() {
             </div>
           )}
 
-          {/* VIEW 3: QUERY HISTORY */}
+          {/* VIEW 3: ORACLE QUERY AUDIT HISTORY */}
           {sidebarView === 'history' && (
-            <div className="flex-1 p-3 space-y-2 overflow-y-auto max-h-[580px]">
-              <div className="flex items-center justify-between text-[11px] text-slate-500 font-medium px-1 pb-1">
-                <span>Recent executions ({history.length})</span>
-                {history.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setHistory([]);
-                      localStorage.removeItem('sql_compiler_history');
-                    }}
-                    className="text-rose-600 hover:underline text-[10px]"
-                  >
-                    Clear History
-                  </button>
-                )}
-              </div>
-              {history.map((h) => (
-                <div
-                  key={h.id}
-                  onClick={() => {
-                    setSql(h.sql);
-                    setMode(h.mode || 'QUERY');
-                  }}
-                  className="p-2.5 rounded-lg border border-slate-200 hover:border-slate-400 bg-white hover:bg-slate-50 cursor-pointer transition-all space-y-1"
-                >
-                  <div className="flex items-center justify-between text-[10px]">
-                    <span
-                      className={`font-mono font-bold px-1.5 py-0.2 rounded ${
-                        h.success ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
-                      }`}
-                    >
-                      {h.statementType || (h.success ? 'SUCCESS' : 'ERROR')}
-                    </span>
-                    <span className="text-slate-400 font-mono">{h.timestamp}</span>
-                  </div>
-                  <pre className="text-[11px] text-slate-800 font-mono line-clamp-2 overflow-hidden bg-slate-50 p-1 rounded">
-                    {h.sql}
-                  </pre>
+            <div className="flex-1 p-3 space-y-2.5 overflow-y-auto max-h-[580px] flex flex-col">
+              <div className="flex items-center justify-between text-[11px] text-slate-500 font-medium px-1 pb-1 border-b border-slate-100">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-slate-700">Oracle Execution Audit</span>
+                  <span className="px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 text-[10px] font-mono font-bold">
+                    {oracleHistory.length}
+                  </span>
                 </div>
-              ))}
-              {history.length === 0 && (
-                <div className="text-center py-12 text-xs text-slate-400">
-                  No queries executed in this session yet.
+                <button
+                  type="button"
+                  onClick={loadOracleHistory}
+                  disabled={historyLoading}
+                  className="flex items-center gap-1 text-slate-600 hover:text-slate-900 text-[10px] font-semibold transition-colors"
+                  title="Refresh live from Oracle SQL_EXECUTION_AUDIT table"
+                >
+                  <RefreshCw className={`w-3 h-3 ${historyLoading ? 'animate-spin' : ''}`} />
+                  <span>Refresh</span>
+                </button>
+              </div>
+
+              {/* Error banner if history load failed */}
+              {historyError && (
+                <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    <div className="text-[11px] font-medium leading-4">
+                      {historyError}
+                    </div>
+                  </div>
+                  {(historyError.includes('403') || historyError.includes('401') || historyError.includes('Access Denied')) && (
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={handleQuickAdminLogin}
+                        disabled={historyLoading}
+                        className="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-semibold transition-colors cursor-pointer"
+                      >
+                        Sign in as Admin (admin123)
+                      </button>
+                      <Link
+                        to="/login"
+                        className="text-[10px] text-blue-600 underline font-semibold"
+                      >
+                        Login Page
+                      </Link>
+                    </div>
+                  )}
                 </div>
               )}
+
+              {/* Filter and Search controls */}
+              {oracleHistory.length > 0 && (
+                <div className="space-y-1.5">
+                  <div className="relative">
+                    <Search className="w-3 h-3 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={historyFilter}
+                      onChange={(e) => setHistoryFilter(e.target.value)}
+                      placeholder="Search query, admin, statement type..."
+                      className="w-full text-xs pl-7 pr-2.5 py-1.5 rounded-md border border-slate-200 focus:outline-none focus:ring-1 focus:ring-slate-400 bg-slate-50 placeholder:text-slate-400"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1 text-[10px]">
+                    {['ALL', 'SUCCESS', 'ERROR'].map((filterMode) => (
+                      <button
+                        key={filterMode}
+                        type="button"
+                        onClick={() => setHistoryStatusFilter(filterMode)}
+                        className={`px-2 py-0.5 rounded font-semibold transition-colors cursor-pointer ${
+                          historyStatusFilter === filterMode
+                            ? 'bg-slate-900 text-white'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {filterMode === 'ALL'
+                          ? `All (${oracleHistory.length})`
+                          : filterMode === 'SUCCESS'
+                          ? `Success (${oracleHistory.filter((h) => h.status === 'SUCCESS').length})`
+                          : `Errors (${oracleHistory.filter((h) => h.status !== 'SUCCESS').length})`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* History Cards */}
+              <div className="space-y-2 flex-1 overflow-y-auto">
+                {filteredHistory.map((h) => (
+                  <div
+                    key={h.auditId}
+                    onClick={() => {
+                      setSql(h.sqlText);
+                      if (h.statementType === 'PLSQL' || h.statementType === 'SCRIPT') {
+                        setMode(h.statementType);
+                      } else {
+                        setMode('QUERY');
+                      }
+                    }}
+                    className="p-2.5 rounded-lg border border-slate-200 hover:border-blue-400 bg-white hover:bg-blue-50/40 cursor-pointer transition-all space-y-1.5 group shadow-2xs"
+                    title="Click to load SQL into editor"
+                  >
+                    <div className="flex items-center justify-between text-[10px]">
+                      <div className="flex items-center gap-1.5 font-mono">
+                        <span className="font-bold text-slate-500">#{h.auditId}</span>
+                        <span
+                          className={`font-mono font-bold px-1.5 py-0.2 rounded text-[9px] ${
+                            h.status === 'SUCCESS'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : h.status === 'BLOCKED'
+                              ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                              : 'bg-rose-50 text-rose-700 border border-rose-200'
+                          }`}
+                        >
+                          {h.status}
+                        </span>
+                        <span className="px-1 py-0.2 rounded bg-slate-100 text-slate-700 text-[9px] font-semibold">
+                          {h.statementType}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-400 font-mono text-[10px]">
+                          {h.executionTimeMs}ms
+                        </span>
+                        <span className="text-[10px] text-blue-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                          Load ➔
+                        </span>
+                      </div>
+                    </div>
+
+                    <pre className="text-[11px] text-slate-800 font-mono line-clamp-2 overflow-hidden bg-slate-50 p-1.5 rounded border border-slate-100">
+                      {h.sqlText}
+                    </pre>
+
+                    <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono">
+                      <span>
+                        Admin: <strong className="text-slate-700">{h.adminId}</strong>
+                        {h.executedAt && (
+                          <span className="text-slate-400 font-sans ml-1.5">
+                            • {formatAuditTimestamp(h.executedAt)}
+                          </span>
+                        )}
+                      </span>
+                      <span>
+                        {h.affectedRows !== null && h.affectedRows !== undefined && h.affectedRows > 0
+                          ? `Aff: ${h.affectedRows}`
+                          : h.returnedRows !== null && h.returnedRows !== undefined
+                          ? `Rows: ${h.returnedRows}`
+                          : ''}
+                      </span>
+                    </div>
+
+                    {h.errorCode && (
+                      <div className="text-[10px] text-rose-600 font-mono bg-rose-50/60 p-1 rounded border border-rose-100 break-all">
+                        {h.errorCode}: {h.errorMessage}
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {oracleHistory.length === 0 && !historyError && (
+                  <div className="text-center py-12 text-xs text-slate-400">
+                    {historyLoading ? 'Fetching Oracle execution history...' : 'No audit entries logged yet.'}
+                  </div>
+                )}
+
+                {oracleHistory.length > 0 && filteredHistory.length === 0 && (
+                  <div className="text-center py-8 text-xs text-slate-400">
+                    No execution logs match filter "{historyFilter}".
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -817,6 +1255,8 @@ export default function SqlCompilerPage() {
             loading={executing}
             mode={mode}
             onModeChange={setMode}
+            strictMode={strictMode}
+            onStrictModeChange={setStrictMode}
           />
 
           {/* EXECUTION RESULT / CONSOLE AREA */}
@@ -833,15 +1273,38 @@ export default function SqlCompilerPage() {
                     className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-bold font-mono text-[11px] ${
                       result.success
                         ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                        : result.statementType === 'BLOCKED'
+                        ? 'bg-amber-100 text-amber-900 border border-amber-300'
                         : 'bg-rose-100 text-rose-800 border border-rose-200'
                     }`}
                   >
                     {result.success ? (
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    ) : result.statementType === 'BLOCKED' ? (
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
                     ) : (
                       <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
                     )}
-                    <span>{result.success ? 'STATUS: SUCCESS (200 OK)' : 'STATUS: ERROR'}</span>
+                    <span>
+                      {result.success
+                        ? 'STATUS: SUCCESS (200 OK)'
+                        : result.statementType === 'BLOCKED'
+                        ? 'STATUS: BLOCKED (INTEGRITY GUARD)'
+                        : 'STATUS: ERROR'}
+                    </span>
+                  </span>
+                )}
+
+                {result && result.transactionState && result.transactionState !== 'NONE' && (
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 rounded font-mono font-bold text-[10px] uppercase border ${
+                      result.transactionState === 'COMMITTED'
+                        ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                        : 'bg-rose-100 text-rose-800 border-rose-300'
+                    }`}
+                    title={`Oracle Transaction Status: ${result.transactionState}`}
+                  >
+                    TX: {result.transactionState}
                   </span>
                 )}
               </div>
@@ -906,8 +1369,32 @@ export default function SqlCompilerPage() {
                 </div>
               )}
 
-              {/* ERROR DISPLAY */}
-              {result && !result.success && (
+              {/* STRICT NOT-NULL INTEGRITY VALIDATION BLOCKED DISPLAY */}
+              {result && (!result.validationPassed || result.statementType === 'BLOCKED') && (
+                <div className="rounded-lg border-2 border-amber-400 bg-amber-50/90 p-4 text-xs space-y-2.5 shadow-sm">
+                  <div className="flex items-center gap-2 text-amber-900 font-bold">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span className="text-sm">Strict NOT-NULL Guard: Execution Blocked</span>
+                    <span className="font-mono px-2 py-0.5 rounded bg-amber-200 text-amber-900 text-[10px] font-extrabold">
+                      ORA-VALIDATION-BLOCKED
+                    </span>
+                  </div>
+                  <p className="text-amber-900 font-medium leading-relaxed font-mono">
+                    {result.message}
+                  </p>
+                  {result.validationMessage && (
+                    <div className="mt-2 p-2.5 rounded bg-amber-100/70 border border-amber-300 font-mono text-[11px] text-amber-950 whitespace-pre-wrap">
+                      {result.validationMessage}
+                    </div>
+                  )}
+                  <div className="text-[11px] text-amber-800 flex items-center gap-1.5 pt-1">
+                    <span>💡 To execute anyway without pre-validation checks, toggle <strong>Strict NOT-NULL Guard</strong> to OFF in the editor toolbar.</span>
+                  </div>
+                </div>
+              )}
+
+              {/* ERROR DISPLAY (Non-validation errors) */}
+              {result && !result.success && result.statementType !== 'BLOCKED' && result.validationPassed && (
                 <div className="rounded-lg border border-rose-300 bg-rose-50/80 p-4 text-xs space-y-2">
                   <div className="flex items-center gap-2 text-rose-900 font-bold">
                     <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />

@@ -22,3 +22,7 @@ spring:
     redis:
       repositories:
         enabled: false
+
+jwt:
+  secret: ${JWT_SECRET:test-dummy-secret-key-for-local-h2-unit-tests-only-min-256-bits}
+  expiration-ms: 86400000

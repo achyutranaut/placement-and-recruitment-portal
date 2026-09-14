@@ -59,6 +59,14 @@ export default function StudentDrivesPage() {
 
   useEffect(() => {
     loadData();
+
+    const handleMutation = () => {
+      loadData();
+    };
+    window.addEventListener('portal:database-mutation', handleMutation);
+    return () => {
+      window.removeEventListener('portal:database-mutation', handleMutation);
+    };
   }, [studentId]);
 
   const studentCgpa = student?.cgpa ? parseFloat(student.cgpa) : 0;
@@ -227,6 +235,12 @@ export default function StudentDrivesPage() {
                     <Award className="w-4 h-4 text-emerald-600" />
                     <span>Package: <strong className="text-slate-900 font-mono">{formatPackage(drive.ctc ?? drive.packageLpa ?? drive.startingCtcLpa)}</strong></span>
                   </div>
+                  {(drive.openings ?? drive.openingsCount) != null && (
+                    <div className="flex items-center gap-1.5">
+                      <Briefcase className="w-4 h-4 text-slate-400" />
+                      <span>Openings: <strong className="text-slate-900 font-mono">{drive.openings ?? drive.openingsCount}</strong></span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-1.5">
                     <Users className="w-4 h-4 text-slate-400" />
                     <span>Min CGPA: <strong className="text-slate-900 font-mono">{drive.minCgpa}</strong></span>

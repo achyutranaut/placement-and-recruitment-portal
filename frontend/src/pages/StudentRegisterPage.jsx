@@ -245,9 +245,9 @@ export default function StudentRegisterPage() {
         cgpa: numCgpa,
         dob: formData.dob,
         phone: formData.phone.trim(),
-        street: formData.street ? formData.street.trim() : '',
-        city: formData.city ? formData.city.trim() : '',
-        state: formData.state ? formData.state.trim() : '',
+        street: formData.street.trim(),
+        city: formData.city.trim(),
+        state: formData.state.trim(),
         skills: formData.skills
           ? formData.skills.split(',').map((s) => s.trim()).filter(Boolean)
           : [],
@@ -646,10 +646,29 @@ export default function StudentRegisterPage() {
               </div>
             </div>
 
+            {/* Street Address */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">Street Address *</label>
+              <div className="mt-1 relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <MapPin className="h-4 w-4" />
+                </div>
+                <input
+                  type="text"
+                  name="street"
+                  value={formData.street}
+                  onChange={handleChange}
+                  required
+                  placeholder="e.g. 14 University Avenue, VIT Campus"
+                  className="block w-full pl-9 pr-3 py-2 border border-slate-300 rounded-md text-xs font-medium text-slate-900 focus:ring-1 focus:ring-slate-900"
+                />
+              </div>
+            </div>
+
             {/* City & State */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700">City</label>
+                <label className="block text-xs font-semibold text-slate-700">City *</label>
                 <div className="mt-1 relative rounded-md shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                     <MapPin className="h-4 w-4" />
@@ -659,6 +678,7 @@ export default function StudentRegisterPage() {
                     name="city"
                     value={formData.city}
                     onChange={handleChange}
+                    required
                     placeholder="e.g. Vellore"
                     className="block w-full pl-9 pr-3 py-2 border border-slate-300 rounded-md text-xs font-medium text-slate-900 focus:ring-1 focus:ring-slate-900"
                   />
@@ -666,12 +686,13 @@ export default function StudentRegisterPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700">State</label>
+                <label className="block text-xs font-semibold text-slate-700">State *</label>
                 <input
                   type="text"
                   name="state"
                   value={formData.state}
                   onChange={handleChange}
+                  required
                   placeholder="e.g. Tamil Nadu"
                   className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md text-xs font-medium text-slate-900 focus:ring-1 focus:ring-slate-900"
                 />

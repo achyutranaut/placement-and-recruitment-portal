@@ -15,8 +15,10 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import com.placement.portal.company.RecruiterAuthorizationService;
 import java.security.Principal;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/interviews")
@@ -26,27 +28,18 @@ public class InterviewController {
     private final InterviewService interviewService;
     private final UserRepository userRepository;
     private final ApplicationRepository applicationRepository;
-    private final com.placement.portal.company.CompanyService companyService;
-    private final com.placement.portal.recruitment.PlacementDriveRepository driveRepository;
-    private final com.placement.portal.company.JobCompanyRepository jobCompanyRepository;
-    private final com.placement.portal.application.DailyRoutineRepository dailyRoutineRepository;
+    private final RecruiterAuthorizationService recruiterAuthService;
 
     public InterviewController(
             InterviewService interviewService,
             UserRepository userRepository,
             ApplicationRepository applicationRepository,
-            com.placement.portal.company.CompanyService companyService,
-            com.placement.portal.recruitment.PlacementDriveRepository driveRepository,
-            com.placement.portal.company.JobCompanyRepository jobCompanyRepository,
-            com.placement.portal.application.DailyRoutineRepository dailyRoutineRepository
+            RecruiterAuthorizationService recruiterAuthService
     ) {
         this.interviewService = interviewService;
         this.userRepository = userRepository;
         this.applicationRepository = applicationRepository;
-        this.companyService = companyService;
-        this.driveRepository = driveRepository;
-        this.jobCompanyRepository = jobCompanyRepository;
-        this.dailyRoutineRepository = dailyRoutineRepository;
+        this.recruiterAuthService = recruiterAuthService;
     }
 
     @PostMapping("/schedule")
@@ -56,7 +49,9 @@ public class InterviewController {
             @Valid @RequestBody ScheduleInterviewDto dto,
             Principal principal
     ) {
-        validateRecruiterApplicationAccess(dto.getApplicationId(), principal);
+        if (principal != null) {
+            recruiterAuthService.requireAuthorizedForApplication(principal, dto.getApplicationId());
+        }
         interviewService.scheduleInterview(dto);
         return ResponseEntity.ok(ApiResponse.ok("Interview scheduled successfully via PL/SQL procedure", null));
     }
@@ -85,14 +80,18 @@ public class InterviewController {
             Principal principal
     ) {
         if (principal != null) {
-            userRepository.findByUsername(principal.getName()).ifPresent(user -> {
+            var userOpt = userRepository.findByUsername(principal.getName());
+            if (userOpt.isPresent()) {
+                PortalUser user = userOpt.get();
                 if (user.getRole() == Role.ROLE_STUDENT) {
                     Application app = applicationRepository.findById(applicationId).orElse(null);
-                    if (app != null && user.getReferenceId() != null && !user.getReferenceId().equalsIgnoreCase(app.getStudentId())) {
+                    if (app != null && (user.getReferenceId() == null || !user.getReferenceId().equalsIgnoreCase(app.getStudentId()))) {
                         throw new AccessDeniedException("Access denied: You may only view interviews for your own applications.");
                     }
+                } else if (user.getRole() == Role.ROLE_RECRUITER) {
+                    recruiterAuthService.requireAuthorizedForApplication(principal, applicationId);
                 }
-            });
+            }
         }
         return ResponseEntity.ok(ApiResponse.ok(interviewService.getInterviewsByApplication(applicationId)));
     }
@@ -105,19 +104,32 @@ public class InterviewController {
             Principal principal
     ) {
         if (principal != null) {
-            userRepository.findByUsername(principal.getName()).ifPresent(user -> {
+            var userOpt = userRepository.findByUsername(principal.getName());
+            if (userOpt.isPresent()) {
+                PortalUser user = userOpt.get();
                 if (user.getRole() == Role.ROLE_STUDENT) {
-                    if (user.getReferenceId() != null && !user.getReferenceId().equalsIgnoreCase(studentId)) {
+                    if (user.getReferenceId() == null || !user.getReferenceId().equalsIgnoreCase(studentId)) {
                         throw new AccessDeniedException("Access denied: Students may only access their own interview evaluations.");
                     }
+                } else if (user.getRole() == Role.ROLE_RECRUITER) {
+                    recruiterAuthService.requireAuthorizedForStudent(principal, studentId);
                 }
-            });
+            }
         }
-        return ResponseEntity.ok(ApiResponse.ok(interviewService.getInterviewsByStudent(studentId)));
+        List<InterviewDto> ivs = interviewService.getInterviewsByStudent(studentId);
+        if (principal != null) {
+            var userOpt = userRepository.findByUsername(principal.getName());
+            if (userOpt.isPresent() && userOpt.get().getRole() == Role.ROLE_RECRUITER) {
+                ivs = ivs.stream()
+                        .filter(iv -> recruiterAuthService.isAuthorizedForApplication(principal, iv.getApplicationId()))
+                        .collect(Collectors.toList());
+            }
+        }
+        return ResponseEntity.ok(ApiResponse.ok(ivs));
     }
 
-
     @GetMapping("/interviewers")
+    @PreAuthorize("hasAnyRole('STUDENT', 'RECRUITER', 'ADMIN')")
     @Operation(summary = "List all pinned interviewers and their designated round numbers")
     public ResponseEntity<ApiResponse<List<InterviewerRound>>> getAllInterviewers() {
         return ResponseEntity.ok(ApiResponse.ok(interviewService.getAllInterviewerRounds()));
@@ -126,8 +138,17 @@ public class InterviewController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'RECRUITER')")
     @Operation(summary = "List all scheduled interviews across candidates")
-    public ResponseEntity<ApiResponse<List<InterviewDto>>> getAllInterviews() {
-        return ResponseEntity.ok(ApiResponse.ok(interviewService.getAllInterviews()));
+    public ResponseEntity<ApiResponse<List<InterviewDto>>> getAllInterviews(Principal principal) {
+        List<InterviewDto> list = interviewService.getAllInterviews();
+        if (principal != null) {
+            var userOpt = userRepository.findByUsername(principal.getName());
+            if (userOpt.isPresent() && userOpt.get().getRole() == Role.ROLE_RECRUITER) {
+                list = list.stream()
+                        .filter(iv -> recruiterAuthService.isAuthorizedForApplication(principal, iv.getApplicationId()))
+                        .collect(Collectors.toList());
+            }
+        }
+        return ResponseEntity.ok(ApiResponse.ok(list));
     }
 
     @PatchMapping("/{applicationId}/{interviewerName}/result")
@@ -139,40 +160,10 @@ public class InterviewController {
             @Valid @RequestBody InterviewResultDto resultDto,
             Principal principal
     ) {
-        validateRecruiterApplicationAccess(applicationId, principal);
+        if (principal != null) {
+            recruiterAuthService.requireAuthorizedForApplication(principal, applicationId);
+        }
         InterviewDto dto = interviewService.recordInterviewResult(applicationId, interviewerName, resultDto);
         return ResponseEntity.ok(ApiResponse.ok("Interview scores recorded", dto));
-    }
-
-    private void validateRecruiterApplicationAccess(String applicationId, Principal principal) {
-        if (principal == null) return;
-        userRepository.findByUsername(principal.getName()).ifPresent(user -> {
-            if (user.getRole() == Role.ROLE_RECRUITER) {
-                var appOpt = applicationRepository.findById(applicationId);
-                if (appOpt.isEmpty()) {
-                    throw new IllegalArgumentException("Application not found: " + applicationId);
-                }
-                var app = appOpt.get();
-                String driveId = app.getDriveId();
-                if (driveId == null || driveId.isBlank()) {
-                    var routineOpt = dailyRoutineRepository.findByStudentIdAndApplyDate(app.getStudentId(), app.getApplyDate());
-                    if (routineOpt.isPresent()) {
-                        driveId = routineOpt.get().getDriveId();
-                    }
-                }
-                if (driveId != null) {
-                    var drvOpt = driveRepository.findById(driveId);
-                    if (drvOpt.isPresent()) {
-                        var jcOpt = jobCompanyRepository.findById(drvOpt.get().getJobTitle());
-                        if (jcOpt.isPresent()) {
-                            String driveCompId = jcOpt.get().getCompanyId();
-                            if (!companyService.isRecruiterAuthorizedForCompany(principal.getName(), driveCompId)) {
-                                throw new AccessDeniedException("Access denied: You are not authorized to evaluate candidates for recruitment drives of company " + driveCompId);
-                            }
-                        }
-                    }
-                }
-            }
-        });
     }
 }

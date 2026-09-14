@@ -124,6 +124,14 @@ export default function RecruiterPortal() {
 
   useEffect(() => {
     loadData();
+
+    const handleMutation = () => {
+      loadData();
+    };
+    window.addEventListener("portal:database-mutation", handleMutation);
+    return () => {
+      window.removeEventListener("portal:database-mutation", handleMutation);
+    };
   }, []);
 
   // Sync selectedCompanyId when activeCompany updates
@@ -602,6 +610,16 @@ export default function RecruiterPortal() {
                       Switch
                     </button>
                   )}
+                  <button
+                    type="button"
+                    onClick={loadData}
+                    disabled={loading}
+                    className="text-xs font-semibold px-3 py-2 rounded-md bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 transition-colors flex items-center gap-1.5 shadow-2xs"
+                    title="Reload latest applicants and drives directly from Oracle Database"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 text-blue-600 ${loading ? 'animate-spin' : ''}`} />
+                    <span>Refresh</span>
+                  </button>
                 </div>
               ) : (
                 <select

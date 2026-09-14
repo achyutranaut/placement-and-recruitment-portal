@@ -113,6 +113,28 @@ public class ResumeController {
             throw new IllegalArgumentException("Invalid file format. Please upload a PDF or Word document (.pdf, .docx).");
         }
 
+        // Binary magic byte validation: inspect binary header
+        byte[] header = new byte[8];
+        try (java.io.InputStream is = file.getInputStream()) {
+            int read = is.read(header);
+            if (read < 4) {
+                throw new IllegalArgumentException("Corrupt file: File content is too small to determine valid document type.");
+            }
+        }
+        if (filename.toLowerCase().endsWith(".pdf")) {
+            // PDF binary signature: %PDF- (0x25, 0x50, 0x44, 0x46, 0x2D)
+            boolean isPdfMagic = header[0] == 0x25 && header[1] == 0x50 && header[2] == 0x44 && header[3] == 0x46 && header[4] == 0x2D;
+            if (!isPdfMagic) {
+                throw new IllegalArgumentException("Invalid file format: Uploaded file does not match expected PDF binary signature (%PDF-).");
+            }
+        } else if (filename.toLowerCase().endsWith(".docx")) {
+            // DOCX is a ZIP container starting with PK (0x50, 0x4B)
+            boolean isZipMagic = header[0] == 0x50 && header[1] == 0x4B;
+            if (!isZipMagic) {
+                throw new IllegalArgumentException("Invalid file format: Uploaded file does not match expected DOCX binary signature.");
+            }
+        }
+
         ResumeDto dto = resumeService.uploadResume(resolvedStudentId, file);
         return ResponseEntity.ok(ApiResponse.ok("Resume uploaded successfully (Version " + dto.getVersionNo() + ")", dto));
     }
@@ -175,7 +197,7 @@ public class ResumeController {
         userRepository.findByUsername(principal.getName()).ifPresent(user -> {
             if (user.getRole() == com.placement.portal.auth.Role.ROLE_STUDENT) {
                 String refId = user.getReferenceId();
-                if (refId != null && !refId.equalsIgnoreCase(targetStudentId)) {
+                if (refId == null || !refId.equalsIgnoreCase(targetStudentId)) {
                     throw new org.springframework.security.access.AccessDeniedException(
                             "Access denied: Students may only access their own resume records."
                     );

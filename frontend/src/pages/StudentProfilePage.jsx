@@ -50,7 +50,7 @@ export default function StudentProfilePage() {
 
     try {
       setLoading(true);
-      const data = await api.getStudent(studentId);
+      const data = await api.getMyProfile();
       setStudent(data);
       setName(data.name || '');
       setEmail(data.email || '');
@@ -75,6 +75,14 @@ export default function StudentProfilePage() {
 
   useEffect(() => {
     loadProfile();
+
+    const handleMutation = () => {
+      loadProfile();
+    };
+    window.addEventListener('portal:database-mutation', handleMutation);
+    return () => {
+      window.removeEventListener('portal:database-mutation', handleMutation);
+    };
   }, [studentId]);
 
   const handleAddSkill = (e) => {
@@ -96,13 +104,9 @@ export default function StudentProfilePage() {
     setNotification(null);
 
     try {
+      // Send ONLY mutable fields - academic records (CGPA, Branch) are strictly immutable
       const payload = {
-        studentId,
         name,
-        email,
-        branch,
-        cgpa: parseFloat(cgpa) || 0,
-        dob,
         street,
         city,
         state,
@@ -110,7 +114,7 @@ export default function StudentProfilePage() {
         skills,
       };
 
-      const updated = await api.updateStudentProfile(studentId, payload);
+      const updated = await api.updateMyProfile(payload);
       setStudent(updated);
       setNotification({
         type: 'success',
@@ -242,56 +246,58 @@ export default function StudentProfilePage() {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-slate-900 bg-slate-50"
+                disabled
+                readOnly
+                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-md bg-slate-100 text-slate-500 cursor-not-allowed"
               />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Academic Branch / Specialization</label>
-              <select
-                value={branch}
-                onChange={(e) => setBranch(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-slate-900 bg-white"
-              >
-                <option value="Computer Science & Engineering">Computer Science & Engineering</option>
-                <option value="Information Technology">Information Technology</option>
-                <option value="Data Science">Data Science</option>
-                <option value="Electronics & Communication">Electronics & Communication</option>
-                <option value="Electrical & Electronics">Electrical & Electronics</option>
-                <option value="Mechanical Engineering">Mechanical Engineering</option>
-                <option value="Civil Engineering">Civil Engineering</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Cumulative Grade Point Average (CGPA)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                max="10"
-                value={cgpa}
-                onChange={(e) => setCgpa(e.target.value)}
-                required
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-slate-900 font-mono"
-              />
-              <span className="text-[11px] text-slate-500 mt-0.5 block">
-                Validated server-side against recruitment drive cutoff thresholds.
+              <span className="text-[11px] text-slate-400 mt-0.5 block">
+                Official Institutional Email (Immutable)
               </span>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Date of Birth (DOB)</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Academic Branch / Specialization <span className="text-[10px] text-slate-500 font-normal">(Managed by Placement Office)</span>
+              </label>
               <input
-                type="date"
+                type="text"
+                value={branch}
+                disabled
+                readOnly
+                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-md bg-slate-100 text-slate-500 cursor-not-allowed"
+              />
+              <span className="text-[11px] text-slate-400 mt-0.5 block">
+                Academic program assigned upon enrollment.
+              </span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Cumulative Grade Point Average (CGPA) <span className="text-[10px] text-amber-600 font-normal">(Official Academic Record - Read Only)</span>
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={cgpa}
+                disabled
+                readOnly
+                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-md bg-slate-100 text-slate-600 font-mono font-bold cursor-not-allowed"
+              />
+              <span className="text-[11px] text-slate-500 mt-0.5 block">
+                CGPA is maintained directly by the Registrar and verified server-side against drive cutoffs.
+              </span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Date of Birth (DOB) <span className="text-[10px] text-slate-500 font-normal">(Official Record)</span>
+              </label>
+              <input
+                type="text"
                 value={dob}
-                onChange={(e) => setDob(e.target.value)}
-                required
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-slate-900"
+                disabled
+                readOnly
+                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-md bg-slate-100 text-slate-500 cursor-not-allowed"
               />
               <span className="text-[11px] text-slate-500 mt-0.5 block">
                 Age is a derived attribute (omitted from physical storage per DA1 BCNF).
@@ -323,32 +329,35 @@ export default function StudentProfilePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-3">
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Street Address</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Street Address *</label>
               <input
                 type="text"
                 value={street}
                 onChange={(e) => setStreet(e.target.value)}
+                required
                 placeholder="Door No, Street name, Area"
                 className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-slate-900"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">City</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">City *</label>
               <input
                 type="text"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
+                required
                 className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-slate-900"
               />
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-xs font-semibold text-slate-700 mb-1">State / Province</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">State / Province *</label>
               <input
                 type="text"
                 value={state}
                 onChange={(e) => setState(e.target.value)}
+                required
                 className="w-full px-3 py-2 text-xs border border-slate-300 rounded-md focus:outline-none focus:ring-1 focus:ring-slate-900"
               />
             </div>

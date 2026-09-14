@@ -22,16 +22,36 @@ public class PlacementDriveController {
 
     private final PlacementDriveService driveService;
     private final UserRepository userRepository;
+    private final com.placement.portal.company.RecruiterAuthorizationService recruiterAuthService;
 
-    public PlacementDriveController(PlacementDriveService driveService, UserRepository userRepository) {
+    public PlacementDriveController(
+            PlacementDriveService driveService,
+            UserRepository userRepository,
+            com.placement.portal.company.RecruiterAuthorizationService recruiterAuthService
+    ) {
         this.driveService = driveService;
         this.userRepository = userRepository;
+        this.recruiterAuthService = recruiterAuthService;
     }
 
     @GetMapping
     @Operation(summary = "List all active placement drives")
-    public ResponseEntity<ApiResponse<List<PlacementDriveDto>>> getAllDrives() {
-        return ResponseEntity.ok(ApiResponse.ok(driveService.getAllDrives()));
+    public ResponseEntity<ApiResponse<List<PlacementDriveDto>>> getAllDrives(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size
+    ) {
+        List<PlacementDriveDto> drives = driveService.getAllDrives();
+        if (page != null || size != null) {
+            int pageSize = (size != null) ? Math.min(Math.max(size, 1), 100) : 20;
+            int pageNum = (page != null) ? Math.max(page, 0) : 0;
+            int fromIndex = pageNum * pageSize;
+            if (fromIndex >= drives.size()) {
+                return ResponseEntity.ok(ApiResponse.ok(java.util.Collections.emptyList()));
+            }
+            int toIndex = Math.min(fromIndex + pageSize, drives.size());
+            return ResponseEntity.ok(ApiResponse.ok(drives.subList(fromIndex, toIndex)));
+        }
+        return ResponseEntity.ok(ApiResponse.ok(drives));
     }
 
     @GetMapping("/eligibility")
@@ -94,9 +114,11 @@ public class PlacementDriveController {
         if (principal != null) {
             userRepository.findByUsername(principal.getName()).ifPresent(user -> {
                 if (user.getRole() == Role.ROLE_STUDENT) {
-                    if (user.getReferenceId() != null && !user.getReferenceId().equalsIgnoreCase(studentId)) {
+                    if (user.getReferenceId() == null || !user.getReferenceId().equalsIgnoreCase(studentId)) {
                         throw new AccessDeniedException("Access denied: Students may only evaluate their own eligibility.");
                     }
+                } else if (user.getRole() == Role.ROLE_RECRUITER) {
+                    recruiterAuthService.requireAuthorizedForStudent(principal, studentId);
                 }
             });
         }
@@ -122,6 +144,12 @@ public class PlacementDriveController {
             @RequestBody PlacementDriveDto dto,
             Principal principal
     ) {
+        if (principal != null) {
+            var userOpt = userRepository.findByUsername(principal.getName());
+            if (userOpt.isPresent() && userOpt.get().getRole() == Role.ROLE_RECRUITER) {
+                recruiterAuthService.requireAuthorizedForDrive(principal, id);
+            }
+        }
         return ResponseEntity.ok(ApiResponse.ok("Drive updated successfully", driveService.updateDrive(id, dto)));
     }
 }

@@ -1,5 +1,6 @@
 package com.placement.portal.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -27,9 +28,14 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
+    private final List<String> allowedOrigins;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter) {
+    public SecurityConfig(
+            JwtAuthenticationFilter jwtAuthFilter,
+            @Value("${cors.allowed-origins:http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173}") List<String> allowedOrigins
+    ) {
         this.jwtAuthFilter = jwtAuthFilter;
+        this.allowedOrigins = allowedOrigins;
     }
 
     @Bean
@@ -47,7 +53,7 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .headers(headers -> headers.frameOptions(frame -> frame.disable())) // Enable H2 console
+                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin())) // Protect against clickjacking while allowing same-origin frames
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**").permitAll()
@@ -80,7 +86,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("*"));
+        config.setAllowedOrigins(allowedOrigins);
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));
         config.setAllowCredentials(true);

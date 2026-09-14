@@ -21,19 +21,19 @@ public class Student {
     @Column(name = "Email", length = 100, nullable = false, unique = true)
     private String email;
 
-    @Column(name = "Street", length = 150)
+    @Column(name = "Street", length = 150, nullable = false)
     private String street;
 
-    @Column(name = "City", length = 50)
+    @Column(name = "City", length = 50, nullable = false)
     private String city;
 
-    @Column(name = "State", length = 50)
+    @Column(name = "State", length = 50, nullable = false)
     private String state;
 
     @Column(name = "DOB", nullable = false)
     private LocalDate dob;
 
-    @Column(name = "Registration_No", length = 20, unique = true)
+    @Column(name = "Registration_No", length = 20, unique = true, nullable = false)
     private String registrationNo;
 
     @Column(name = "CGPA", precision = 4, scale = 2, nullable = false)
@@ -42,10 +42,10 @@ public class Student {
     @Column(name = "Branch", length = 50, nullable = false)
     private String branch;
 
-    @Column(name = "Program_Id", length = 20)
+    @Column(name = "Program_Id", length = 20, nullable = false)
     private String programId;
 
-    @Column(name = "Placement_Status", length = 20)
+    @Column(name = "Placement_Status", length = 20, nullable = false)
     private String placementStatus = "NOT_PLACED";
 
     @ElementCollection(fetch = FetchType.EAGER)

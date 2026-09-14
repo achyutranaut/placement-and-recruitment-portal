@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Play, RotateCcw, Copy, Check, Wand2, Terminal, Zap, Layers } from 'lucide-react';
+import { Play, RotateCcw, Copy, Check, Wand2, Terminal, Zap, Layers, ShieldCheck } from 'lucide-react';
 
 const SQL_KEYWORDS = [
   'SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'NOT', 'IN', 'EXISTS', 'LIKE', 'BETWEEN',
@@ -22,6 +22,8 @@ export default function SqlEditor({
   loading = false,
   mode = 'QUERY',
   onModeChange,
+  strictMode = true,
+  onStrictModeChange,
 }) {
   const textareaRef = useRef(null);
   const lineNumbersRef = useRef(null);
@@ -196,6 +198,29 @@ export default function SqlEditor({
             <RotateCcw className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Clear</span>
           </button>
+
+          {onStrictModeChange && (
+            <button
+              type="button"
+              onClick={() => onStrictModeChange(!strictMode)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold transition-all border ${
+                strictMode
+                  ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700/80 hover:bg-emerald-900/80'
+                  : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-750 hover:text-slate-200'
+              }`}
+              title="Strict NOT-NULL Guard: Pre-validates DML against Oracle dictionary USER_TAB_COLUMNS to block missing NOT NULL columns and NULL values before execution"
+            >
+              <ShieldCheck className={`w-3.5 h-3.5 ${strictMode ? 'text-emerald-400' : 'text-slate-500'}`} />
+              <span className="hidden sm:inline">Strict NOT-NULL Guard</span>
+              <span
+                className={`px-1.5 py-0.2 text-[9px] font-mono font-bold rounded ${
+                  strictMode ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700 text-slate-400'
+                }`}
+              >
+                {strictMode ? 'ON' : 'OFF'}
+              </span>
+            </button>
+          )}
 
           {/* Conditional "RUN SELECTION" button if text is highlighted */}
           {selectedText && (

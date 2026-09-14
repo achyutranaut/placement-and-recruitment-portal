@@ -51,7 +51,23 @@ public class StudentService {
     }
 
     @Transactional
-    public StudentDto updateProfile(String studentId, StudentDto dto) {
+    public StudentDto updateStudentProfile(String studentId, StudentUpdateDto dto) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new IllegalArgumentException("Student not found with ID: " + studentId));
+
+        if (dto.getName() != null) student.setName(dto.getName());
+        if (dto.getStreet() != null) student.setStreet(dto.getStreet());
+        if (dto.getCity() != null) student.setCity(dto.getCity());
+        if (dto.getState() != null) student.setState(dto.getState());
+        if (dto.getPhoneNumbers() != null) student.setPhoneNumbers(dto.getPhoneNumbers());
+        if (dto.getSkills() != null) student.setSkills(dto.getSkills());
+
+        Student updated = studentRepository.save(student);
+        return StudentDto.fromEntity(updated);
+    }
+
+    @Transactional
+    public StudentDto adminUpdateStudent(String studentId, StudentDto dto) {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new IllegalArgumentException("Student not found with ID: " + studentId));
 
@@ -67,5 +83,10 @@ public class StudentService {
 
         Student updated = studentRepository.save(student);
         return StudentDto.fromEntity(updated);
+    }
+
+    @Transactional
+    public StudentDto updateProfile(String studentId, StudentDto dto) {
+        return adminUpdateStudent(studentId, dto);
     }
 }

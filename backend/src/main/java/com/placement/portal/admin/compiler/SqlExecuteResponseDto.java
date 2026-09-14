@@ -18,6 +18,9 @@ public class SqlExecuteResponseDto {
     private Integer errorLineNumber;
     private String sql;
     private List<SqlExecuteResponseDto> scriptResults;
+    private String transactionState = "NONE"; // COMMITTED, ROLLED_BACK, NONE
+    private boolean validationPassed = true;
+    private String validationMessage;
 
     public SqlExecuteResponseDto() {}
 
@@ -131,6 +134,23 @@ public class SqlExecuteResponseDto {
         dto.setDbmsOutput(dbmsOutput);
         dto.setExecutionTimeMs(executionTimeMs);
         dto.setMessage(fullError != null ? fullError : errorMessage);
+        dto.setTransactionState("ROLLED_BACK");
+        return dto;
+    }
+
+    public static SqlExecuteResponseDto blockedResult(String message, String validationDetail, String sql) {
+        SqlExecuteResponseDto dto = new SqlExecuteResponseDto();
+        dto.setSuccess(false);
+        dto.setStatementType("BLOCKED");
+        dto.setErrorCode("ORA-VALIDATION-BLOCKED");
+        dto.setErrorMessage(message);
+        dto.setFullError(message);
+        dto.setMessage(message);
+        dto.setValidationPassed(false);
+        dto.setValidationMessage(validationDetail);
+        dto.setTransactionState("NONE");
+        dto.setSql(sql);
+        dto.setExecutionTimeMs(0);
         return dto;
     }
 
@@ -178,4 +198,13 @@ public class SqlExecuteResponseDto {
 
     public List<SqlExecuteResponseDto> getScriptResults() { return scriptResults; }
     public void setScriptResults(List<SqlExecuteResponseDto> scriptResults) { this.scriptResults = scriptResults; }
+
+    public String getTransactionState() { return transactionState; }
+    public void setTransactionState(String transactionState) { this.transactionState = transactionState; }
+
+    public boolean isValidationPassed() { return validationPassed; }
+    public void setValidationPassed(boolean validationPassed) { this.validationPassed = validationPassed; }
+
+    public String getValidationMessage() { return validationMessage; }
+    public void setValidationMessage(String validationMessage) { this.validationMessage = validationMessage; }
 }

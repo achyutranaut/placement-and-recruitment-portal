@@ -2,6 +2,10 @@
 set -e
 
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+if [ -z "$JWT_SECRET" ]; then
+    echo "[*] Generating ephemeral 256-bit JWT_SECRET for this local runtime session..."
+    export JWT_SECRET=$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | xxd -p -c 32)
+fi
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 echo "================================================================="

@@ -1,193 +1,201 @@
-# Student Placement and Recruitment Portal
+# Student Placement & Recruitment Portal (VIT Placement Cell)
 
-> **Academic Course Project for DA2 (Database Assessment 2)**  
-> **Authoritative Database Engine**: Oracle SQL & PL/SQL  
+> **Academic Course Project for DBMS DA2 (Database Assessment 2)**  
+> **Authoritative Database Engine**: Oracle Database 23ai Free / 21c XE (`FREEPDB1`)  
 > **Backend Architecture**: Spring Boot 3.4.3 Modular Monolith (Java 21/26)  
-> **Frontend Architecture**: React 19, Vite, Tailwind CSS v4, Lucide Icons  
-> **DevOps & Infrastructure**: Docker Compose, Redis, Prometheus, GitHub Actions CI  
+> **Frontend Architecture**: React 19, Vite, Tailwind CSS v4, Monaco-style SQL Editor, Lucide Icons  
+> **DevOps & Infrastructure**: Docker, Flyway Migrations (V1–V22), Actuator, Swagger UI  
 
 ---
 
 ## Table of Contents
-1. [Project Overview & Academic Context](#1-project-overview--academic-context)
-2. [Key Highlights & Architectural Decisions](#2-key-highlights--architectural-decisions)
-3. [System Architecture](#3-system-architecture)
-4. [Database & PL/SQL Engine (DA2 Requirements)](#4-database--plsql-engine-da2-requirements)
-5. [User Portals & Features](#5-user-portals--features)
-6. [Quickstart & Running Locally](#6-quickstart--running-locally)
-7. [Automated Testing & CI/CD](#7-automated-testing--cicd)
-8. [Documentation Index](#8-documentation-index)
+1. [Master Project Overview](#1-master-project-overview)
+2. [Authoritative Oracle Architecture (Zero Mock Policy)](#2-authoritative-oracle-architecture-zero-mock-policy)
+3. [Relational Integrity & Normalization (DA1→DA2)](#3-relational-integrity--normalization-da1da2)
+4. [PL/SQL Engine & Autonomic Database Objects](#4-plsql-engine--autonomic-database-objects)
+5. [In-Browser Oracle SQL & PL/SQL Compiler](#5-in-browser-oracle-sql--plsql-compiler)
+6. [User Personas & End-to-End Workflows](#6-user-personas--end-to-end-workflows)
+7. [Quickstart & Live Execution](#7-quickstart--live-execution)
+8. [Automated Verification & Test Suite](#8-automated-verification--test-suite)
+9. [Documentation Index & Viva Guide](#9-documentation-index--viva-guide)
 
 ---
 
-## 1. Project Overview & Academic Context
+## 1. Master Project Overview
 
-The **Student Placement and Recruitment Portal** is a production-grade enterprise system designed to automate campus placement drives, candidate registrations, technical evaluations, and offer letter generation for university placement cells.
+The **VIT Student Placement & Recruitment Portal** is a production-grade enterprise DBMS application engineered to automate the end-to-end campus recruitment lifecycle. Built to satisfy the rigorous requirements of **DBMS DA2**, the portal pairs an authoritative **Oracle Database 23ai** instance with a reactive Spring Boot backend and an institutionally themed React 19 interface.
 
-This project implements the **DA1 database design** (scanned handwritten relational analysis, entity mappings, and 1NF→BCNF normalization proofs) as an authoritative database using **Oracle SQL & PL/SQL**, integrated with a modern Spring Boot backend and responsive web interface.
-
----
-
-## 2. Key Highlights & Architectural Decisions
-
-1. **Strict DA1 Relational Fidelity (Locked Decisions)**:
-   - **Composite Batch Primary Key**: `BATCH` primary key is `(Program_Id, Batch_No)`, correctly scoping batches to their parent programs without cross-program ID collisions.
-   - **Pinned Interviewer Round Model**: Strictly implements `INTERVIEWER_ROUND(Interviewer_Name PK, Interview_Round_No)` enforcing the functional dependency `Interviewer_Name → Interview_Round_No`.
-   - **21 Normalized Relational Tables**: Built upon the 13 base relations + 2 junction relations designed and proven to BCNF in DA1.
-2. **Oracle SQL & PL/SQL as the Authoritative Engine**:
-   - Stored procedures with transactional `SAVEPOINT` and `ROLLBACK TO SAVEPOINT` (`REGISTER_STUDENT_PROGRAM`, `APPLY_FOR_DRIVE`, `SCHEDULE_INTERVIEW`, `ISSUE_OFFER`).
-   - Autonomic database triggers (`TRG_OFFER_APPLICATION_STATUS`, `TRG_APPLICATION_AUDIT`).
-   - Analytic computational functions (`GET_PLACEMENT_RATE`, `GET_AVERAGE_PACKAGE`) and Ref Cursors.
-   - Cursor-driven report generation package (`PKG_PLACEMENT_REPORTS`).
-3. **Dual Database Profile Architecture**:
-   - **Oracle Profile (`application-oracle.yml`)**: Authoritative engine for deployment with Oracle Database 23ai Free / 21c XE.
-   - **H2 Profile (`application-h2.yml`)**: Zero-dependency offline test profile executing identical procedures and schemas for 100% automated CI test pass rates.
-4. **Resilient Web Client**:
-   - Fast React 19 + Vite frontend with Tailwind CSS v4 styling.
-   - Real-time backend status detection with local offline state simulation matching PL/SQL semantics for seamless viva demonstrations.
+### Core Objectives Achieved
+- **Single Source of Truth**: 100% of data—student profiles, academic program catalogs, placement drives, resume BLOBs, round evaluations, offers, and audit logs—originates from Oracle Database 23ai. Zero runtime mock arrays or client-side fallback stubs.
+- **Enterprise Transactional Workflows**: ACID transactional procedures (`REGISTER_STUDENT_PROGRAM`, `APPLY_FOR_DRIVE`, `SCHEDULE_INTERVIEW`, `ISSUE_OFFER`) with deterministic rollback semantics.
+- **Interactive Faculty Demonstration**: In-portal SQL/PLSQL Compiler with `DBMS_OUTPUT` streaming, `ResultSetMetaData` column projection, and Oracle Data Dictionary schema explorer.
 
 ---
 
-## 3. System Architecture
+## 2. Authoritative Oracle Architecture (Zero Mock Policy)
 
 ```
-                                  [ WEB BROWSER / CLIENT ]
-                                             |
-                         +-------------------+-------------------+
-                         |                   |                   |
-                   /student view      /recruiter view       /admin view
-                         |                   |                   |
-                         +-------------------+-------------------+
-                                             |
-                                    [ REACT 19 + VITE ]
-                                 (Port 3000 / Nginx Alpine)
-                                             |  REST / JWT
-                                             v
-                           [ SPRING BOOT 3.4 MODULAR MONOLITH ]
-                                 (Port 8080 / Java 21)
-                                             |
-                  +--------------------------+--------------------------+
-                  |                          |                          |
-           [ Spring Security ]      [ JPA Repositories ]      [ Spring JDBC DAO ]
-              (JWT Bearer)             (CRUD & Domain)         (PL/SQL Procedures)
-                  |                          |                          |
-                  +--------------------------+--------------------------+
-                                             |
-                                             v
-                             [ ORACLE DATABASE 23ai FREE ]
-                               (Port 1521 / FREEPDB1)
-                     - 21 Normalized BCNF Relational Tables
-                     - Stored Procedures, Functions & Ref Cursors
-                     - Triggers & Automatic Audit Trail
+                              [ USER WEB BROWSER / CLIENT ]
+                                            |
+              +-----------------------------+-----------------------------+
+              |                             |                             |
+       /student portal               /recruiter portal             /admin & SQL compiler
+              |                             |                             |
+              +-----------------------------+-----------------------------+
+                                            |
+                                   [ REACT 19 + VITE ]
+                                (Port 3000 / Proxy /api)
+                                            |  REST / JWT Bearer
+                                            v
+                         [ SPRING BOOT 3.4 MODULAR MONOLITH ]
+                                (Port 8080 / Java 21)
+                                            |
+             +------------------------------+------------------------------+
+             |                              |                              |
+      [ Spring Security ]         [ JPA Repositories ]           [ Spring JDBC DAO ]
+         (BCrypt + JWT)         (Entities & Domain Logic)      (PL/SQL Stored Procedures)
+             |                              |                              |
+             +------------------------------+------------------------------+
+                                            |
+                                            v
+                            [ ORACLE DATABASE 23ai FREE ]
+                              (Port 1521 / PDB: FREEPDB1)
+                     ---------------------------------------------
+                     • 27 Normalized Relational Tables (BCNF)
+                     • 5 Analytical Views
+                     • 4 Transactional Stored Procedures
+                     • 4 Computational Functions & Ref Cursors
+                     • 5 Autonomic Triggers & Audit Journal
+                     • 54 Performance B-Tree Indexes
+                     • 22 Flyway Versioned Migrations
 ```
 
 ---
 
-## 4. Database & PL/SQL Engine (DA2 Requirements)
+## 3. Relational Integrity & Normalization (DA1→DA2)
 
-| Category | Requirement | Implemented Object / Script |
-|----------|-------------|------------------------------|
-| **DDL** | Create Tables, Constraints | `database/migrations/V1__create_schema.sql`, `V2__constraints.sql` |
-| **Indexes** | Performance B-Tree Indexes | `database/migrations/V3__indexes.sql` |
-| **Views** | Analytical & Summary Views | `database/migrations/V4__views.sql` (`V_STUDENT_APPLICATIONS`, `V_OFFER_SUMMARY`, etc.) |
-| **DML** | Inserts, Realistic Seed Data | `database/migrations/V5__sample_data.sql` (22 students, 10 companies, drives, offers) |
-| **PL/SQL Procedures** | Transactional Procedures | `database/migrations/V6__procedures.sql` (`REGISTER_STUDENT_PROGRAM`, `APPLY_FOR_DRIVE`, `SCHEDULE_INTERVIEW`, `ISSUE_OFFER`) |
-| **PL/SQL Functions** | Metrics & Ref Cursors | `database/migrations/V7__functions.sql` (`GET_PLACEMENT_RATE`, `GET_AVERAGE_PACKAGE`, `GET_ELIGIBLE_STUDENTS`) |
-| **PL/SQL Cursors** | Batch Reports Package | `database/migrations/V8__cursors.sql` (`PKG_PLACEMENT_REPORTS`) |
-| **PL/SQL Triggers** | Autonomic Business Rules | `database/migrations/V9__triggers.sql` (`TRG_OFFER_APPLICATION_STATUS`, `TRG_APPLICATION_AUDIT`) |
-| **DQL** | Complex Queries & Joins | `database/migrations/V10__demo_queries.sql` (5-table JOIN, GROUP BY + HAVING, DENSE_RANK) |
-| **DCL** | Roles, Grants, Revokes | `database/dcl/roles_and_grants.sql` (`ROLE_PORTAL_STUDENT`, `ROLE_PORTAL_RECRUITER`, `ROLE_PORTAL_ADMIN`) |
-| **TCL** | Commit, Savepoint, Rollback | `database/tcl/transaction_scenarios.sql` |
+The database schema strictly adheres to the scanned handwritten DA1 relational specifications and 1NF ➔ 2NF ➔ 3NF ➔ BCNF proofs:
+
+1. **Composite Batch Scoping**: `BATCH(Program_Id, Batch_No)` primary key scopes batch numbers uniquely to their degree program.
+2. **Pinned Interviewer Round Model**: `INTERVIEWER_ROUND(Interviewer_Name PK, Interview_Round_No)` enforces the functional dependency `Interviewer_Name → Interview_Round_No`.
+3. **Daily Routine Drive Constraint**: `STUDENT_DAILY_ROUTINE_DRIVE(Student_Id, Apply_Date, Drive_Id)` enforces institutional policy restricting students to at most 1 drive application per calendar day.
+4. **Program Eligibility Junction**: `DRIVE_ELIGIBILITY(Drive_Id, Program_Id)` maps recruitment drives directly to canonical academic degree programs (`BTECH-CSE`, `BTECH-IT`, `BCE`, etc.).
+5. **Resume BLOB Storage**: `STUDENT_RESUME` stores PDF resumes directly as Oracle `BLOB` datatypes with strict MIME verification and binary version tracking.
 
 ---
 
-## 5. User Portals & Features
+## 4. PL/SQL Engine & Autonomic Database Objects
 
-### Student Portal (`/student`)
-- **Profile Card**: CGPA, Branch, Registration ID, and Super Dream eligibility badge.
-- **Enrolled Programs**: Batch schedule, classroom location, and duration.
-- **Active Placement Drives**: Real-time eligibility checking (`student.cgpa >= drive.minCgpa`) with **1-Click Apply** invoking PL/SQL `APPLY_FOR_DRIVE`.
-- **Applications Tracker**: Visual pipeline stepper (`APPLIED` ➔ `SHORTLISTED` ➔ `INTERVIEWING` ➔ `SELECTED`).
-- **Scheduled Interviews**: View assigned round, pinned interviewer, and scores.
-- **Offers Vault**: View issued offers and generate formal offer letters.
-
-### Recruiter Portal (`/recruiter`)
-- **Company Overview**: Contact info, partner ID, and drive metrics.
-- **Candidate Pipeline**: Filter applicants by drive or name; shortlist candidates.
-- **Interview Scheduling**: Assign rounds to pinned interviewers (`INTERVIEWER_ROUND`) and delivery modes (Online/Offline) invoking PL/SQL `SCHEDULE_INTERVIEW`.
-- **Score Recording**: Grade candidates across OA, GD, and HR rounds.
-- **Offer Issuance**: Award CTC package (LPA) invoking PL/SQL `ISSUE_OFFER` which fires `TRG_OFFER_APPLICATION_STATUS`.
-
-### Admin & DBA Portal (`/admin`)
-- **Executive Placement KPIs**: Placement rate (%), Average CTC (LPA), Total offers.
-- **Interactive Charts**: Salary Tier distribution (Super Dream, Dream, Regular) and application funnel.
-- **Students Directory**: Searchable directory of registered candidates.
-- **Database Trigger Audit Trail**: Live view of `APPLICATION_AUDIT` table records populated by autonomic triggers.
-- **DA2 DQL Runner**: Interactive query runner demonstrating multi-table joins, aggregations with `HAVING`, and window functions.
+| Type | Object Name | Purpose & Business Rules |
+|------|-------------|--------------------------|
+| **Procedure** | `REGISTER_STUDENT_PROGRAM` | Validates student prerequisites and atomically registers student into program batches. |
+| **Procedure** | `APPLY_FOR_DRIVE` | Enforces CGPA thresholds, program eligibility, and 1-per-day application limits with `SAVEPOINT`. |
+| **Procedure** | `SCHEDULE_INTERVIEW` | Coordinates multi-round evaluations, interview mode (Online/Offline), and pins interviewers. |
+| **Procedure** | `ISSUE_OFFER` | Validates candidate stage (`SELECTED`/`INTERVIEWING`), writes offer, and fires triggers. |
+| **Function** | `GET_PLACEMENT_RATE()` | Computes institutional placement percentage live across active graduates. |
+| **Function** | `GET_AVERAGE_PACKAGE()` | Calculates average CTC across all finalized acceptance records. |
+| **Trigger** | `TRG_OFFER_APPLICATION_STATUS` | Automatically transitions `APPLICATION.Status` to `OFFERED` upon offer generation. |
+| **Trigger** | `TRG_APPLICATION_AUDIT` | Writes before/after status mutations into `APPLICATION_AUDIT` journal with timestamps and user info. |
+| **Trigger** | `TRG_OFFER_ACCEPTANCE_ATOMIC` | Enforces single-offer acceptance by atomically declining competing active offers. |
 
 ---
 
-## 6. Quickstart & Running Locally
+## 5. In-Browser Oracle SQL & PL/SQL Compiler
 
-### Option 1: Docker Compose (Recommended)
+Located at `http://localhost:3000/admin/sql`, the in-browser compiler enables live database interaction during faculty evaluations:
+
+- **Full Oracle Dialect Support**: Executes DQL (`SELECT`), DML (`INSERT`, `UPDATE`, `DELETE`), DDL (`CREATE`, `ALTER`), and PL/SQL blocks (`DECLARE ... BEGIN ... END;`).
+- **Live `DBMS_OUTPUT` Streaming**: Captures `DBMS_OUTPUT.PUT_LINE` buffer in real time and renders formatted console output.
+- **Dynamic Meta Projection**: Uses JDBC `ResultSetMetaData` to dynamically construct column headers, datatypes, and tabular results for any arbitrary query.
+- **Schema Explorer**: Inspects live tables, columns, constraints, views, stored procedures, functions, and triggers directly from the Oracle Data Dictionary (`USER_TABLES`, `USER_VIEWS`, `USER_OBJECTS`).
+
+---
+
+## 6. User Personas & End-to-End Workflows
+
+### Authentication Personas
+
+| Persona | Username | Password | Role | Entity Mapping | Key Capabilities |
+|---------|----------|----------|------|----------------|------------------|
+| **Student** | `25bce1799` | `password123` | `ROLE_STUDENT` | `STU023` (Achyut Ranaut, CGPA 9.20, B.Tech CSE) | Upload BLOB resume, check drive eligibility, apply for drives, track pipeline, accept offers, download PDF offer letters. |
+| **Recruiter** | `recruiter1` | `password123` | `ROLE_RECRUITER` | `COM004` (Microsoft India) & `COM001` (TCS) | View applicants, schedule interview rounds, score technical stages, issue official employment offers. |
+| **Admin** | `admin` | `admin123` | `ROLE_ADMIN` | Placement Cell Headquarters | View analytics KPI dashboard, inspect audit journal, execute queries in Oracle SQL Compiler. |
+
+### End-to-End Operational Lifecycle
+1. **Resume Submission**: Student uploads PDF resume ➔ stored in Oracle `STUDENT_RESUME.Resume_Data` as binary `BLOB`.
+2. **Drive Application**: Student checks drive requirements ➔ PL/SQL `APPLY_FOR_DRIVE` verifies CGPA and program compatibility ➔ records entry in `APPLICATION` and `STUDENT_DAILY_ROUTINE_DRIVE`.
+3. **Interview Progression**: Recruiter schedules technical rounds ➔ assigns pinned interviewers ➔ records scores in `INTERVIEW` and `RESUME_EVALUATION`.
+4. **Offer Issuance**: Recruiter executes `ISSUE_OFFER` ➔ creates `OFFER_LETTER` entry with canonical drive CTC ➔ status transitions to `OFFERED`.
+5. **Atomic Acceptance**: Student accepts offer ➔ candidate status becomes `PLACED` ➔ competing offers are atomically declined ➔ official PDF offer letter generated dynamically.
+
+---
+
+## 7. Quickstart & Live Execution
+
+### One-Command Full Stack Launcher
+To launch the complete infrastructure (Oracle Database check, Spring Boot backend on port 8080, and React Vite frontend on port 3000):
 
 ```bash
-cd infrastructure
-docker compose up --build -d
+./run_portal.sh
 ```
-Access the application at `http://localhost:3000`.
 
-### Option 2: Local Development
+### Manual Component Launch
 
-#### Start Backend:
+#### 1. Verify Oracle Database Container
+```bash
+docker start oracle-free
+# Verify listener on port 1521
+nc -z localhost 1521
+```
+
+#### 2. Start Spring Boot Backend (Port 8080)
 ```bash
 cd backend
-export JAVA_HOME=/opt/homebrew/opt/openjdk
-mvn spring-boot:run -Dspring-boot.run.profiles=h2
+mvn spring-boot:run -Dspring-boot.run.profiles=oracle
 ```
 
-#### Start Frontend:
+#### 3. Start React Frontend (Port 3000)
 ```bash
 cd frontend
 npm run dev
 ```
 
-### Demo Accounts
-
-| Persona | Username | Password | Role | Reference |
-|---------|----------|----------|------|-----------|
-| **Student** | `student1` | `password123` | `ROLE_STUDENT` | `STU001` (Aarav Sharma, CGPA: 9.42) |
-| **Recruiter** | `recruiter1` | `password123` | `ROLE_RECRUITER` | `C001` (Microsoft IDC) |
-| **Admin** | `admin` | `admin123` | `ROLE_ADMIN` | `ADMIN` (Placement Cell) |
+### Service Access URLs
+- **Web Portal**: [http://localhost:3000](http://localhost:3000)
+- **Student Dashboard**: [http://localhost:3000/student](http://localhost:3000/student)
+- **Recruiter Pipeline**: [http://localhost:3000/recruiter](http://localhost:3000/recruiter)
+- **Placement Admin & Analytics**: [http://localhost:3000/admin](http://localhost:3000/admin)
+- **In-Portal SQL Compiler**: [http://localhost:3000/admin/sql](http://localhost:3000/admin/sql)
+- **Swagger UI API Documentation**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+- **Actuator Health Metrics**: [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health)
 
 ---
 
-## 7. Automated Testing & CI/CD
+## 8. Automated Verification & Test Suite
 
-### Backend Tests
+### Backend Unit & Integration Tests (89 Tests)
 ```bash
 cd backend
-mvn clean test -o
+mvn test
 ```
-**Results**: 11 out of 11 tests pass (0 failures, 0 errors).
+**Results**: **89 / 89 tests passing (0 failures, 0 errors)** covering PL/SQL simulations, JWT authorization, transactional integrity, resume BLOB handling, and database reports.
 
 ### Frontend Production Build
 ```bash
 cd frontend
 npm run build
 ```
-**Results**: Production bundle built cleanly in ~400ms.
+**Results**: Clean production compilation with zero errors.
 
 ---
 
-## 8. Documentation Index
+## 9. Documentation Index & Viva Guide
 
+- [System Architecture Specification](docs/architecture.md)
 - [DA1 Analysis & Normalization Proofs](docs/da1-analysis.md)
 - [Locked DA1/DA2 Decisions Record](docs/da1-da2-decisions.md)
-- [System Architecture Specification](docs/architecture.md)
 - [Database & PL/SQL Engine Reference](docs/database.md)
 - [REST API Specification](docs/api.md)
 - [Setup & Installation Guide](docs/setup.md)
 - [Testing Strategy & Test Suite](docs/testing.md)
-- [DA2 Traceability Matrix](docs/da2-traceability.md)
 - [Academic Demonstration & Viva Guide](docs/demo-guide.md)

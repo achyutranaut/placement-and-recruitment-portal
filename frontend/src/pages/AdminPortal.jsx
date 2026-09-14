@@ -26,6 +26,7 @@ import {
   Shield,
   Trash2,
   Plus,
+  RefreshCw,
 } from "lucide-react";
 
 export default function AdminPortal() {
@@ -36,16 +37,20 @@ export default function AdminPortal() {
   const [applications, setApplications] = useState([]);
   const [offers, setOffers] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
+  const [recruiters, setRecruiters] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("overview"); // overview, students, drives, offers, database, recruiters
-  const [studentSearch, setStudentSearch] = useState("");
+  const [activeTab, setActiveTab] = useState("overview");
   const [notification, setNotification] = useState(null);
 
-  // Recruiter Authorization Management State
-  const [recruiters, setRecruiters] = useState([]);
+  // Recruiter authorization modal / action state
   const [assigningRecruiterId, setAssigningRecruiterId] = useState(null);
   const [selectedCompanyToAssign, setSelectedCompanyToAssign] = useState("");
   const [recruiterActionLoading, setRecruiterActionLoading] = useState(false);
+
+  // Filter States
+  const [studentSearch, setStudentSearch] = useState("");
+  const [studentBranchFilter, setStudentBranchFilter] = useState("ALL");
+  const [driveSearch, setDriveSearch] = useState("");
 
   // Database Console State
   const [selectedQueryKey, setSelectedQueryKey] = useState("DQL_JOIN");
@@ -53,6 +58,10 @@ export default function AdminPortal() {
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [consoleExecuting, setConsoleExecuting] = useState(false);
   const [consoleResult, setConsoleResult] = useState(null);
+
+  // SQL Compiler Execution Audit Log (SQL_EXECUTION_AUDIT)
+  const [sqlAuditLogs, setSqlAuditLogs] = useState([]);
+  const [sqlAuditLoading, setSqlAuditLoading] = useState(false);
 
   const loadData = async () => {
     try {
@@ -93,10 +102,54 @@ export default function AdminPortal() {
     }
   };
 
+  const loadSqlAudit = async () => {
+    try {
+      setSqlAuditLoading(true);
+      const data = await api.getSqlHistory(50);
+      setSqlAuditLogs(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Failed to load SQL execution audit:", err);
+    } finally {
+      setSqlAuditLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadData();
     loadRecruiters();
+    loadSqlAudit();
+
+    // Real-time synchronization: automatically reload all data whenever SQL compiler executes mutations
+    const handleMutation = () => {
+      loadData();
+      loadRecruiters();
+      loadSqlAudit();
+    };
+    window.addEventListener("portal:database-mutation", handleMutation);
+
+    let channel;
+    try {
+      channel = new BroadcastChannel("portal-database-channel");
+      channel.onmessage = () => {
+        handleMutation();
+      };
+    } catch (_) {}
+
+    return () => {
+      window.removeEventListener("portal:database-mutation", handleMutation);
+      if (channel) {
+        channel.close();
+      }
+    };
   }, []);
+
+  // Reload data whenever activeTab changes to guarantee zero stale data
+  useEffect(() => {
+    loadData();
+    if (activeTab === "database") {
+      loadSqlAudit();
+    }
+  }, [activeTab]);
 
   const handleAssignCompany = async (userId, companyId) => {
     if (!companyId) return;
@@ -203,16 +256,38 @@ export default function AdminPortal() {
     color: idx === 0 ? "bg-emerald-600" : idx === 1 ? "bg-indigo-600" : "bg-amber-600",
   }));
 
-  // Donut chart data from overview report application status counts
+  // Metadata for all canonical Oracle application stages (defined in CHK_APP_STATUS constraint)
+  const STAGE_METADATA = {
+    ACCEPTED: { name: "Accepted", color: "#059669", order: 1 },
+    OFFERED: { name: "Offered", color: "#10b981", order: 2 },
+    SELECTED: { name: "Selected", color: "#0d9488", order: 3 },
+    INTERVIEWING: { name: "Interviewing", color: "#2563eb", order: 4 },
+    SHORTLISTED: { name: "Shortlisted", color: "#7c3aed", order: 5 },
+    APPLIED: { name: "Applied", color: "#d97706", order: 6 },
+    DECLINED: { name: "Declined", color: "#64748b", order: 7 },
+    REJECTED: { name: "Rejected", color: "#e11d48", order: 8 },
+  };
+
+  // Donut chart data dynamically derived from Oracle database report applicationStatusCounts
   const appStatusCounts = overview?.applicationStatusCounts || {};
-  const statusDonutData = [
-    { name: "Offered", value: appStatusCounts.OFFERED || 0, color: "#10b981" },
-    { name: "Selected", value: appStatusCounts.SELECTED || 0, color: "#0d9488" },
-    { name: "Interviewing", value: appStatusCounts.INTERVIEWING || 0, color: "#2563eb" },
-    { name: "Shortlisted", value: appStatusCounts.SHORTLISTED || 0, color: "#7c3aed" },
-    { name: "Applied", value: appStatusCounts.APPLIED || 0, color: "#d97706" },
-    { name: "Rejected", value: appStatusCounts.REJECTED || 0, color: "#e11d48" },
-  ].filter((d) => d.value > 0);
+  const statusDonutData = Object.entries(appStatusCounts)
+    .map(([statusKey, val]) => {
+      const upperKey = statusKey.trim().toUpperCase();
+      const meta = STAGE_METADATA[upperKey] || {
+        name: upperKey.charAt(0) + upperKey.slice(1).toLowerCase(),
+        color: "#94a3b8",
+        order: 99,
+      };
+      return {
+        name: meta.name,
+        value: Number(val) || 0,
+        color: meta.color,
+        order: meta.order,
+      };
+    })
+    .filter((d) => d.value > 0)
+    .sort((a, b) => a.order - b.order);
+
 
   // Filtered Students
   const filteredStudents = students.filter(
@@ -257,27 +332,44 @@ export default function AdminPortal() {
           </p>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex flex-wrap bg-slate-100 p-1 rounded-md text-xs font-medium text-slate-600">
-          {[
-            { id: "overview", label: "Overview & Analytics" },
-            { id: "students", label: "Students Directory" },
-            { id: "drives", label: "Companies & Drives" },
-            { id: "offers", label: "Released Offers" },
-            { id: "recruiters", label: "Recruiter Authorization" },
-            { id: "database", label: "Database Console & Audit" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={"px-3 py-1.5 rounded transition-all " +
-                (activeTab === tab.id
-                  ? "bg-white text-slate-900 font-bold shadow-sm"
-                  : "hover:text-slate-900")}
-            >
-              {tab.label}
-            </button>
-          ))}
+        {/* Tab Navigation & Refresh Button */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              loadData();
+              loadRecruiters();
+              loadSqlAudit();
+            }}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold shadow-xs transition-all shrink-0"
+            title="Reload all metrics and tables directly from Oracle Database"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-blue-600 ${loading ? 'animate-spin' : ''}`} />
+            <span>Refresh from Oracle</span>
+          </button>
+
+          <div className="flex flex-wrap bg-slate-100 p-1 rounded-md text-xs font-medium text-slate-600">
+            {[
+              { id: "overview", label: "Overview & Analytics" },
+              { id: "students", label: "Students Directory" },
+              { id: "drives", label: "Companies & Drives" },
+              { id: "offers", label: "Released Offers" },
+              { id: "recruiters", label: "Recruiter Authorization" },
+              { id: "database", label: "Database Console & Audit" },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={"px-3 py-1.5 rounded transition-all " +
+                  (activeTab === tab.id
+                    ? "bg-white text-slate-900 font-bold shadow-sm"
+                    : "hover:text-slate-900")}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -876,6 +968,102 @@ export default function AdminPortal() {
                     <tr>
                       <td colSpan={5} className="text-center py-6 text-xs text-slate-500">
                         No audit records currently found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Section C: Oracle SQL Compiler Execution Audit Trail (SQL_EXECUTION_AUDIT) */}
+          <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                  <Terminal className="w-4 h-4 text-purple-700" />
+                  SQL Compiler Execution Audit Trail (SQL_EXECUTION_AUDIT)
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Persistent Oracle database audit entries logged by the Admin SQL Compiler with performance metrics and execution status
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={loadSqlAudit}
+                  disabled={sqlAuditLoading}
+                  className="flex items-center gap-1 text-slate-600 hover:text-slate-900 text-xs font-semibold px-2.5 py-1 rounded border border-slate-200 bg-slate-50"
+                  title="Refresh SQL Execution Audit Log"
+                >
+                  <RefreshCw className={`w-3 h-3 ${sqlAuditLoading ? 'animate-spin' : ''}`} />
+                  <span>Refresh</span>
+                </button>
+                <span className="text-xs font-mono font-bold px-2.5 py-1 bg-purple-50 text-purple-700 rounded border border-purple-200">
+                  {sqlAuditLogs.length} SQL Audit Entries
+                </span>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase tracking-wider">
+                  <tr>
+                    <th className="px-4 py-3">Audit ID</th>
+                    <th className="px-4 py-3">Executed At</th>
+                    <th className="px-4 py-3">Admin</th>
+                    <th className="px-4 py-3">Type</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Rows</th>
+                    <th className="px-4 py-3">Latency</th>
+                    <th className="px-4 py-3">SQL Query</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 text-slate-700 font-mono text-[11px]">
+                  {sqlAuditLogs.map((log) => (
+                    <tr key={log.auditId} className="hover:bg-slate-50">
+                      <td className="px-4 py-3 font-bold text-slate-500">#{log.auditId}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-slate-500">
+                        {log.executedAt ? new Date(log.executedAt).toLocaleString() : '—'}
+                      </td>
+                      <td className="px-4 py-3 font-bold text-slate-800">{log.adminId}</td>
+                      <td className="px-4 py-3">
+                        <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-800 font-bold text-[10px]">
+                          {log.statementType}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            log.status === 'SUCCESS'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : log.status === 'BLOCKED'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-rose-100 text-rose-800'
+                          }`}
+                        >
+                          {log.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {log.affectedRows !== null && log.affectedRows !== undefined
+                          ? `Aff: ${log.affectedRows}`
+                          : log.returnedRows !== null && log.returnedRows !== undefined
+                          ? `Ret: ${log.returnedRows}`
+                          : '—'}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-800">
+                        {log.executionTimeMs} ms
+                      </td>
+                      <td className="px-4 py-3 max-w-xs truncate text-slate-600" title={log.sqlText}>
+                        {log.sqlText}
+                      </td>
+                    </tr>
+                  ))}
+                  {sqlAuditLogs.length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="text-center py-6 text-xs text-slate-500">
+                        {sqlAuditLoading ? 'Loading audit records...' : 'No SQL compiler audit records found.'}
                       </td>
                     </tr>
                   )}

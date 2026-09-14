@@ -137,6 +137,20 @@ export const api = {
   },
 
   // Students
+  async getMyProfile() {
+    const res = await fetch(`${BASE_URL}/students/me`, { headers: getAuthHeaders() });
+    return handleResponse(res);
+  },
+
+  async updateMyProfile(profileData) {
+    const res = await fetch(`${BASE_URL}/students/me`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(profileData),
+    });
+    return handleResponse(res);
+  },
+
   async getStudent(studentId) {
     const res = await fetch(`${BASE_URL}/students/${studentId}`, { headers: getAuthHeaders() });
     return handleResponse(res);
@@ -466,11 +480,18 @@ export const api = {
   },
 
   // Dedicated SQL & PL/SQL Compiler APIs
-  async executeSql({ sql, mode = 'QUERY' }) {
+  async executeSql({ sql, mode = 'QUERY', strictMode = true }) {
     const res = await fetch(`${BASE_URL}/admin/sql/execute`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ sql, mode }),
+      body: JSON.stringify({ sql, mode, strictMode }),
+    });
+    return handleResponse(res);
+  },
+
+  async getSqlHistory(limit = 50) {
+    const res = await fetch(`${BASE_URL}/admin/sql/history?limit=${limit}`, {
+      headers: getAuthHeaders(),
     });
     return handleResponse(res);
   },

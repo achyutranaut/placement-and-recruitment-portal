@@ -78,13 +78,14 @@ export function BarChart({ data, xKey = 'name', yKey = 'value', height = 220, un
 }
 
 // Custom SVG Donut / Pie Chart
-export function DonutChart({ data, size = 180 }) {
-  const total = data.reduce((sum, item) => sum + (item.value || 0), 0) || 1;
+export function DonutChart({ data = [], size = 180 }) {
+  const rawTotal = data.reduce((sum, item) => sum + (Number(item.value) || 0), 0);
+  const total = rawTotal > 0 ? rawTotal : 1; // used only for SVG dash array to prevent division by zero
   const radius = size / 2 - 16;
   const circumference = 2 * Math.PI * radius;
   let accumulatedAngle = 0;
 
-  const colors = ['#4f46e5', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
+  const colors = ['#4f46e5', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#64748b'];
 
   return (
     <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
@@ -98,49 +99,56 @@ export function DonutChart({ data, size = 180 }) {
             stroke="#f1f5f9"
             strokeWidth="20"
           />
-          {data.map((item, idx) => {
-            const val = item.value || 0;
-            const strokeDasharray = `${(val / total) * circumference} ${circumference}`;
-            const strokeDashoffset = -accumulatedAngle * circumference;
-            accumulatedAngle += val / total;
+          {rawTotal > 0 &&
+            data.map((item, idx) => {
+              const val = Number(item.value) || 0;
+              if (val <= 0) return null;
+              const strokeDasharray = `${(val / total) * circumference} ${circumference}`;
+              const strokeDashoffset = -accumulatedAngle * circumference;
+              accumulatedAngle += val / total;
 
-            return (
-              <circle
-                key={idx}
-                cx={size / 2}
-                cy={size / 2}
-                r={radius}
-                fill="transparent"
-                stroke={item.color || colors[idx % colors.length]}
-                strokeWidth="20"
-                strokeDasharray={strokeDasharray}
-                strokeDashoffset={strokeDashoffset}
-                className="transition-all duration-700 hover:opacity-80"
-              />
-            );
-          })}
+              return (
+                <circle
+                  key={idx}
+                  cx={size / 2}
+                  cy={size / 2}
+                  r={radius}
+                  fill="transparent"
+                  stroke={item.color || colors[idx % colors.length]}
+                  strokeWidth="20"
+                  strokeDasharray={strokeDasharray}
+                  strokeDashoffset={strokeDashoffset}
+                  className="transition-all duration-700 hover:opacity-80"
+                />
+              );
+            })}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-2xl font-bold text-slate-800">{total}</span>
+          <span className="text-2xl font-bold text-slate-800">{rawTotal}</span>
           <span className="text-[10px] uppercase font-semibold text-slate-400">Total</span>
         </div>
       </div>
 
       {/* Legend */}
       <div className="flex flex-col gap-2 min-w-[140px]">
-        {data.map((item, idx) => (
-          <div key={idx} className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-              <span
-                className="w-2.5 h-2.5 rounded-full"
-                style={{ backgroundColor: item.color || colors[idx % colors.length] }}
-              />
-              <span className="text-slate-600 font-medium">{item.name}</span>
+        {data.length === 0 || rawTotal === 0 ? (
+          <div className="text-xs text-slate-400 italic">No applications recorded</div>
+        ) : (
+          data.map((item, idx) => (
+            <div key={idx} className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <span
+                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                  style={{ backgroundColor: item.color || colors[idx % colors.length] }}
+                />
+                <span className="text-slate-600 font-medium">{item.name}</span>
+              </div>
+              <span className="font-semibold text-slate-900 font-mono ml-3">{item.value}</span>
             </div>
-            <span className="font-semibold text-slate-900 font-mono ml-3">{item.value}</span>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );
 }
+

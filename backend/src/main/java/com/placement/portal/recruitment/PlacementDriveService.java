@@ -4,6 +4,7 @@ import com.placement.portal.application.DailyRoutineRepository;
 import com.placement.portal.company.CompanyRepository;
 import com.placement.portal.company.EmailCompany;
 import com.placement.portal.company.EmailCompanyRepository;
+import com.placement.portal.company.JobCompany;
 import com.placement.portal.company.JobCompanyRepository;
 import com.placement.portal.program.Program;
 import com.placement.portal.program.ProgramRepository;
@@ -159,7 +160,64 @@ public class PlacementDriveService {
     }
 
     public List<PlacementDriveDto> getAllDrives() {
-        return driveRepository.findAll().stream().map(this::toDto).collect(Collectors.toList());
+        List<PlacementDrive> drives = driveRepository.findAll();
+        if (drives.isEmpty()) return java.util.Collections.emptyList();
+
+        Map<String, String> jobToCompanyId = jobCompanyRepository.findAll().stream()
+                .collect(Collectors.toMap(JobCompany::getJobTitle, JobCompany::getCompanyId, (a, b) -> a));
+
+        Map<String, String> compIdToEmail = companyRepository.findAll().stream()
+                .collect(Collectors.toMap(com.placement.portal.company.Company::getCompanyId, com.placement.portal.company.Company::getEmail, (a, b) -> a));
+
+        Map<String, String> emailToName = emailCompanyRepository.findAll().stream()
+                .collect(Collectors.toMap(EmailCompany::getEmail, EmailCompany::getCompanyName, (a, b) -> a));
+
+        Map<String, String> progIdToName = programRepository.findAll().stream()
+                .collect(Collectors.toMap(Program::getProgramId, Program::getProgramName, (a, b) -> a));
+
+        Map<String, List<String>> driveToProgIds = driveEligibilityRepository.findAll().stream()
+                .collect(Collectors.groupingBy(DriveEligibility::getDriveId,
+                        Collectors.mapping(DriveEligibility::getProgramId, Collectors.toList())));
+
+        Map<String, Long> driveApplicantCounts = dailyRoutineRepository.findAll().stream()
+                .filter(r -> r.getDriveId() != null)
+                .collect(Collectors.groupingBy(com.placement.portal.application.StudentDailyRoutineDrive::getDriveId, Collectors.counting()));
+
+        return drives.stream().map(d -> {
+            String companyId = jobToCompanyId.getOrDefault(d.getJobTitle(), "");
+            String email = compIdToEmail.getOrDefault(companyId, "");
+            String companyName = emailToName.getOrDefault(email, "Recruiter");
+
+            long applicantCount = driveApplicantCounts.getOrDefault(d.getDriveId(), 0L);
+            LocalDate driveDate = d.getDriveDate() != null ? d.getDriveDate() : LocalDate.now().plusDays(14);
+            LocalDate deadline = d.getApplicationDeadline() != null ? d.getApplicationDeadline() : LocalDate.now().plusDays(7);
+            int openings = d.getOpenings() != null ? d.getOpenings() : 15;
+            BigDecimal pkg = d.getCtc();
+            String desc = d.getJobDescription();
+            String loc = d.getLocation();
+
+            List<String> progIds = driveToProgIds.getOrDefault(d.getDriveId(), java.util.Collections.emptyList());
+            List<String> progNames = progIds.stream().map(id -> progIdToName.getOrDefault(id, id)).collect(Collectors.toList());
+            String branches = !progNames.isEmpty() ? String.join(", ", progNames) : d.getEligibleBranches();
+            String process = d.getSelectionProcess();
+
+            return new PlacementDriveDto(
+                    d.getDriveId(),
+                    d.getJobTitle(),
+                    d.getMinCgpa(),
+                    companyId,
+                    companyName,
+                    driveDate,
+                    deadline,
+                    openings,
+                    pkg,
+                    applicantCount,
+                    desc,
+                    loc,
+                    branches,
+                    process
+            );
+        }).collect(Collectors.toList());
     }
 
     public PlacementDriveDto getDriveById(String driveId) {

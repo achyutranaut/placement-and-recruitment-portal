@@ -20,7 +20,7 @@ public class Application {
     @Column(name = "Status", length = 30, nullable = false)
     private String status = "APPLIED";
 
-    @Column(name = "Drive_Id", length = 20)
+    @Column(name = "Drive_Id", length = 20, nullable = false)
     private String driveId;
 
     public Application() {}

@@ -15,4 +15,8 @@ public interface StudentRepository extends JpaRepository<Student, String> {
     boolean existsByRegistrationNo(String registrationNo);
     List<Student> findByCgpaGreaterThanEqual(BigDecimal minCgpa);
     List<Student> findByCityIgnoreCase(String city);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("SELECT s FROM Student s WHERE s.studentId = :studentId")
+    Optional<Student> findByIdWithLock(@org.springframework.data.repository.query.Param("studentId") String studentId);
 }

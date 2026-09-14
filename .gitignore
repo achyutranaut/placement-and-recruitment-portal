@@ -27,3 +27,15 @@ dist-ssr
 # Maven build output
 backend/target/
 target/
+
+# Environment and Secret files
+.env
+.env.local
+.env.*.local
+*.env
+!*.env.example
+*.pem
+*.key
+*.p12
+*.jks
+

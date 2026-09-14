@@ -107,4 +107,44 @@ public class ReportJdbcDao {
         """;
         return jdbcTemplate.queryForList(sql);
     }
+
+    /**
+     * Aggregates application counts by status directly from the database using SQL GROUP BY.
+     * Pre-populates all canonical statuses defined in CHK_APP_STATUS (V15 migration).
+     */
+    public Map<String, Long> getApplicationStatusCounts() {
+        Map<String, Long> statusCounts = new java.util.LinkedHashMap<>();
+        // All canonical statuses per CHK_APP_STATUS constraint
+        statusCounts.put("APPLIED", 0L);
+        statusCounts.put("SHORTLISTED", 0L);
+        statusCounts.put("INTERVIEWING", 0L);
+        statusCounts.put("SELECTED", 0L);
+        statusCounts.put("OFFERED", 0L);
+        statusCounts.put("ACCEPTED", 0L);
+        statusCounts.put("DECLINED", 0L);
+        statusCounts.put("REJECTED", 0L);
+
+        String sql = "SELECT UPPER(TRIM(Status)) AS APP_STATUS, COUNT(*) AS STATUS_COUNT FROM APPLICATION GROUP BY UPPER(TRIM(Status))";
+        try {
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql);
+            for (Map<String, Object> row : rows) {
+                String status = null;
+                Number count = null;
+                for (Map.Entry<String, Object> entry : row.entrySet()) {
+                    if ("APP_STATUS".equalsIgnoreCase(entry.getKey())) {
+                        status = entry.getValue() != null ? entry.getValue().toString().trim().toUpperCase() : null;
+                    } else if ("STATUS_COUNT".equalsIgnoreCase(entry.getKey())) {
+                        count = (Number) entry.getValue();
+                    }
+                }
+                if (status != null && count != null) {
+                    statusCounts.put(status, count.longValue());
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to query application status counts via SQL GROUP BY: {}", e.getMessage());
+        }
+        return statusCounts;
+    }
 }
+

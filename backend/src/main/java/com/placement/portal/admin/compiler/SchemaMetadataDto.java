@@ -44,6 +44,8 @@ public class SchemaMetadataDto {
         private String tableName;
         private Long rowCount;
         private List<ColumnMetadata> columns;
+        private List<String> checkConstraints = new java.util.ArrayList<>();
+        private List<String> uniqueConstraints = new java.util.ArrayList<>();
 
         public TableMetadata() {}
 
@@ -51,6 +53,14 @@ public class SchemaMetadataDto {
             this.tableName = tableName;
             this.rowCount = rowCount;
             this.columns = columns;
+        }
+
+        public TableMetadata(String tableName, Long rowCount, List<ColumnMetadata> columns, List<String> checkConstraints, List<String> uniqueConstraints) {
+            this.tableName = tableName;
+            this.rowCount = rowCount;
+            this.columns = columns;
+            this.checkConstraints = checkConstraints != null ? checkConstraints : new java.util.ArrayList<>();
+            this.uniqueConstraints = uniqueConstraints != null ? uniqueConstraints : new java.util.ArrayList<>();
         }
 
         public String getTableName() { return tableName; }
@@ -61,6 +71,12 @@ public class SchemaMetadataDto {
 
         public List<ColumnMetadata> getColumns() { return columns; }
         public void setColumns(List<ColumnMetadata> columns) { this.columns = columns; }
+
+        public List<String> getCheckConstraints() { return checkConstraints; }
+        public void setCheckConstraints(List<String> checkConstraints) { this.checkConstraints = checkConstraints; }
+
+        public List<String> getUniqueConstraints() { return uniqueConstraints; }
+        public void setUniqueConstraints(List<String> uniqueConstraints) { this.uniqueConstraints = uniqueConstraints; }
     }
 
     public static class ColumnMetadata {
@@ -69,7 +85,9 @@ public class SchemaMetadataDto {
         private Integer dataLength;
         private boolean nullable;
         private boolean isPrimaryKey;
+        private boolean isUnique;
         private String foreignKeyRef;
+        private String dataDefault;
 
         public ColumnMetadata() {}
 
@@ -80,6 +98,17 @@ public class SchemaMetadataDto {
             this.nullable = nullable;
             this.isPrimaryKey = isPrimaryKey;
             this.foreignKeyRef = foreignKeyRef;
+        }
+
+        public ColumnMetadata(String columnName, String dataType, Integer dataLength, boolean nullable, boolean isPrimaryKey, boolean isUnique, String foreignKeyRef, String dataDefault) {
+            this.columnName = columnName;
+            this.dataType = dataType;
+            this.dataLength = dataLength;
+            this.nullable = nullable;
+            this.isPrimaryKey = isPrimaryKey;
+            this.isUnique = isUnique;
+            this.foreignKeyRef = foreignKeyRef;
+            this.dataDefault = dataDefault;
         }
 
         public String getColumnName() { return columnName; }
@@ -97,8 +126,14 @@ public class SchemaMetadataDto {
         public boolean isPrimaryKey() { return isPrimaryKey; }
         public void setPrimaryKey(boolean isPrimaryKey) { this.isPrimaryKey = isPrimaryKey; }
 
+        public boolean isUnique() { return isUnique; }
+        public void setUnique(boolean isUnique) { this.isUnique = isUnique; }
+
         public String getForeignKeyRef() { return foreignKeyRef; }
         public void setForeignKeyRef(String foreignKeyRef) { this.foreignKeyRef = foreignKeyRef; }
+
+        public String getDataDefault() { return dataDefault; }
+        public void setDataDefault(String dataDefault) { this.dataDefault = dataDefault; }
     }
 
     public static class ViewMetadata {
