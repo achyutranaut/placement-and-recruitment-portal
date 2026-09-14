@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import SqlEditor from '../components/SqlEditor';
 import {
@@ -257,15 +258,19 @@ export default function SqlCompilerPage() {
         loadSchema();
       }
     } catch (err) {
+      const isAuthError = err.message && (err.message.includes('403') || err.message.includes('Access Denied') || err.message.includes('401'));
       setResult({
         success: false,
         statementType: 'ERROR',
-        errorCode: 'ORA-CLIENT',
+        errorCode: isAuthError ? 'ORA-403-ACCESS-DENIED' : 'ORA-CLIENT',
         errorMessage: err.message || 'Execution failed',
-        fullError: err.message || 'Network or execution error',
+        fullError: isAuthError
+          ? `${err.message}\n\n[Action Required]: The SQL Compiler requires active Placement Admin privileges (ROLE_ADMIN). If you recently logged in with a Student or Recruiter account in another tab, your session token was updated. Please re-login with the Admin credentials (admin / admin123).`
+          : (err.message || 'Network or execution error'),
         executionTimeMs: 0,
         columns: null,
         rows: null,
+        isAuthError,
       });
     } finally {
       setExecuting(false);
@@ -916,6 +921,16 @@ export default function SqlCompilerPage() {
                   <pre className="font-mono text-rose-800 whitespace-pre-wrap break-all bg-white/70 p-3 rounded border border-rose-200 leading-5">
                     {result.fullError || result.errorMessage || 'Unknown error during execution'}
                   </pre>
+                  {result.isAuthError && (
+                    <div className="pt-2">
+                      <Link
+                        to="/login"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs shadow-sm transition-colors"
+                      >
+                        Sign in as Admin (admin / admin123)
+                      </Link>
+                    </div>
+                  )}
                 </div>
               )}
 

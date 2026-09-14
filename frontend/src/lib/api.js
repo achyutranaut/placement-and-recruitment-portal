@@ -41,7 +41,16 @@ function getAuthHeaders() {
 async function handleResponse(res) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const errorMsg = data.message || `Request failed with status ${res.status}`;
+    let errorMsg = data.message;
+    if (!errorMsg) {
+      if (res.status === 403) {
+        errorMsg = 'Access Denied (403): Your session token has expired or your current active login lacks Administrator privileges. Please re-login as Placement Admin (admin / admin123).';
+      } else if (res.status === 401) {
+        errorMsg = 'Session Expired (401): Please log in again to continue.';
+      } else {
+        errorMsg = `Request failed with status ${res.status}`;
+      }
+    }
     throw new Error(errorMsg);
   }
   return data.data !== undefined ? data.data : data;
