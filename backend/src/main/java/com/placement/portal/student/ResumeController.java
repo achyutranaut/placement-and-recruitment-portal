@@ -192,6 +192,74 @@ public class ResumeController {
         return downloadResume(current.getResumeId(), principal);
     }
 
+    @DeleteMapping("/{resumeId}")
+    @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN')")
+    @Operation(summary = "Delete student resume version permanently (purges Oracle row and BLOB)")
+    public ResponseEntity<ApiResponse<ResumeDto>> deleteResume(
+            @PathVariable String resumeId,
+            Principal principal) {
+
+        if (principal == null) {
+            throw new org.springframework.security.access.AccessDeniedException("Authentication required.");
+        }
+
+        var userOpt = userRepository.findByUsername(principal.getName());
+        if (userOpt.isEmpty()) {
+            throw new org.springframework.security.access.AccessDeniedException("Authenticated user not found.");
+        }
+
+        var user = userOpt.get();
+        boolean isAdmin = user.getRole() == com.placement.portal.auth.Role.ROLE_ADMIN;
+        String authenticatedStudentId = null;
+
+        if (user.getRole() == com.placement.portal.auth.Role.ROLE_STUDENT) {
+            authenticatedStudentId = user.getReferenceId();
+            if (authenticatedStudentId == null || authenticatedStudentId.isBlank()) {
+                authenticatedStudentId = user.getUsername();
+            }
+        }
+
+        ResumeDto deleted = resumeService.deleteResume(authenticatedStudentId, resumeId, isAdmin);
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Resume version " + deleted.getVersionNo() + " (" + deleted.getFileName() + ") permanently deleted from Oracle database.",
+                deleted
+        ));
+    }
+
+    @PutMapping("/{resumeId}/activate")
+    @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN')")
+    @Operation(summary = "Set a resume version as active")
+    public ResponseEntity<ApiResponse<ResumeDto>> activateResume(
+            @PathVariable String resumeId,
+            Principal principal) {
+
+        if (principal == null) {
+            throw new org.springframework.security.access.AccessDeniedException("Authentication required.");
+        }
+
+        var userOpt = userRepository.findByUsername(principal.getName());
+        if (userOpt.isEmpty()) {
+            throw new org.springframework.security.access.AccessDeniedException("Authenticated user not found.");
+        }
+
+        var user = userOpt.get();
+        boolean isAdmin = user.getRole() == com.placement.portal.auth.Role.ROLE_ADMIN;
+        String authenticatedStudentId = null;
+
+        if (user.getRole() == com.placement.portal.auth.Role.ROLE_STUDENT) {
+            authenticatedStudentId = user.getReferenceId();
+            if (authenticatedStudentId == null || authenticatedStudentId.isBlank()) {
+                authenticatedStudentId = user.getUsername();
+            }
+        }
+
+        ResumeDto activated = resumeService.activateResume(authenticatedStudentId, resumeId, isAdmin);
+        return ResponseEntity.ok(ApiResponse.ok(
+                "Resume version " + activated.getVersionNo() + " is now your active resume.",
+                activated
+        ));
+    }
+
     private void validateStudentAccess(String targetStudentId, Principal principal) {
         if (principal == null) return;
         userRepository.findByUsername(principal.getName()).ifPresent(user -> {

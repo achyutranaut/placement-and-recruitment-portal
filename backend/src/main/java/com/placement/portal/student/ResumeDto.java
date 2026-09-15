@@ -61,4 +61,8 @@ public class ResumeDto {
 
     public String getIsCurrent() { return isCurrent; }
     public void setIsCurrent(String isCurrent) { this.isCurrent = isCurrent; }
+
+    public Long getFileSizeBytes() { return fileSize; }
+    public String getIsActive() { return isCurrent; }
+    public boolean isActive() { return "Y".equalsIgnoreCase(isCurrent); }
 }

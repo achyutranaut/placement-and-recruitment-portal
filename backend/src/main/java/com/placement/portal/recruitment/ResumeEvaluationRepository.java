@@ -11,4 +11,5 @@ public interface ResumeEvaluationRepository extends JpaRepository<ResumeEvaluati
     List<ResumeEvaluation> findByApplicationIdOrderByEvaluatedAtDesc(String applicationId);
     Optional<ResumeEvaluation> findTopByApplicationIdOrderByEvaluatedAtDesc(String applicationId);
     List<ResumeEvaluation> findByResumeId(String resumeId);
+    void deleteByResumeId(String resumeId);
 }

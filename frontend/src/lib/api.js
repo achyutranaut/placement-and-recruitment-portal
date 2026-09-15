@@ -241,6 +241,22 @@ export const api = {
     window.open(url, '_blank');
   },
 
+  async deleteResume(resumeId) {
+    const res = await fetch(`${BASE_URL}/resumes/${resumeId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(res);
+  },
+
+  async activateResume(resumeId) {
+    const res = await fetch(`${BASE_URL}/resumes/${resumeId}/activate`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(res);
+  },
+
   // Academic Programs & Batches
   async getPrograms() {
     const res = await fetch(`${BASE_URL}/programs`, { headers: getAuthHeaders() });

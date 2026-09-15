@@ -1,5 +1,8 @@
 package com.placement.portal.student;
 
+import com.placement.portal.common.ResourceNotFoundException;
+import com.placement.portal.recruitment.ResumeEvaluationRepository;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,10 +17,15 @@ public class ResumeService {
 
     private final StudentResumeRepository resumeRepository;
     private final StudentRepository studentRepository;
+    private final ResumeEvaluationRepository evaluationRepository;
 
-    public ResumeService(StudentResumeRepository resumeRepository, StudentRepository studentRepository) {
+    public ResumeService(
+            StudentResumeRepository resumeRepository,
+            StudentRepository studentRepository,
+            ResumeEvaluationRepository evaluationRepository) {
         this.resumeRepository = resumeRepository;
         this.studentRepository = studentRepository;
+        this.evaluationRepository = evaluationRepository;
     }
 
     @Transactional
@@ -78,10 +86,67 @@ public class ResumeService {
 
     public StudentResume getResumeEntity(String resumeId) {
         return resumeRepository.findById(resumeId)
-                .orElseThrow(() -> new IllegalArgumentException("Resume not found with ID: " + resumeId));
+                .orElseThrow(() -> new ResourceNotFoundException("Resume not found with ID: " + resumeId));
     }
 
     public ResumeDto getResumeById(String resumeId) {
         return ResumeDto.fromEntity(getResumeEntity(resumeId));
+    }
+
+    @Transactional
+    public ResumeDto deleteResume(String authenticatedStudentId, String resumeId, boolean isAdmin) {
+        StudentResume resume = resumeRepository.findById(resumeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Resume not found with ID: " + resumeId));
+
+        // Enforce ownership: reject attempts to delete another student's resume with 403
+        if (!isAdmin && (authenticatedStudentId == null || !resume.getStudentId().equalsIgnoreCase(authenticatedStudentId))) {
+            throw new AccessDeniedException("Access denied: You may only delete your own resume records.");
+        }
+
+        // Active resume protection:
+        // Do NOT allow deletion of the currently active resume if it would leave the student with no active resume.
+        if ("Y".equalsIgnoreCase(resume.getIsCurrent())) {
+            List<StudentResume> studentResumes = resumeRepository.findByStudentIdOrderByVersionNoDesc(resume.getStudentId());
+            if (studentResumes.size() <= 1) {
+                throw new IllegalStateException(
+                        "This is your active resume. Upload another resume and activate it before deleting this version."
+                );
+            } else {
+                throw new IllegalStateException(
+                        "Cannot delete active resume (Version " + resume.getVersionNo() + "). Please activate another resume version first before deleting this version."
+                );
+            }
+        }
+
+        // Cascade any referencing evaluation records
+        try {
+            evaluationRepository.deleteByResumeId(resumeId);
+        } catch (Exception ignored) {}
+
+        ResumeDto deletedDto = ResumeDto.fromEntity(resume);
+        // Deleting the entity purges the row and its associated Resume_Data BLOB in Oracle
+        resumeRepository.delete(resume);
+        return deletedDto;
+    }
+
+    @Transactional
+    public ResumeDto activateResume(String authenticatedStudentId, String resumeId, boolean isAdmin) {
+        StudentResume targetResume = resumeRepository.findById(resumeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Resume not found with ID: " + resumeId));
+
+        if (!isAdmin && (authenticatedStudentId == null || !targetResume.getStudentId().equalsIgnoreCase(authenticatedStudentId))) {
+            throw new AccessDeniedException("Access denied: You may only activate your own resume records.");
+        }
+
+        List<StudentResume> allResumes = resumeRepository.findByStudentIdOrderByVersionNoDesc(targetResume.getStudentId());
+        for (StudentResume r : allResumes) {
+            if (r.getResumeId().equalsIgnoreCase(resumeId)) {
+                r.setIsCurrent("Y");
+            } else {
+                r.setIsCurrent("N");
+            }
+        }
+        resumeRepository.saveAll(allResumes);
+        return ResumeDto.fromEntity(targetResume);
     }
 }
