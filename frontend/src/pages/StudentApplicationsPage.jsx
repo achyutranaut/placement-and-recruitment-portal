@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Printer,
   Download,
+  Lock,
 } from 'lucide-react';
 
 export default function StudentApplicationsPage() {
@@ -88,10 +89,10 @@ export default function StudentApplicationsPage() {
     { key: 'INTERVIEWING', label: '3. Interviewing' },
     { key: 'SELECTED', label: '4. Selected' },
     { key: 'OFFERED', label: '5. Offered' },
+    { key: 'ACCEPTED', label: '6. Accepted' },
   ];
 
   const getStageIndex = (status) => {
-    if (status === 'ACCEPTED') return pipelineStages.length - 1;
     const idx = pipelineStages.findIndex((s) => s.key === status);
     return idx !== -1 ? idx : 0;
   };
@@ -388,34 +389,98 @@ export default function StudentApplicationsPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-5 gap-2 text-center text-xs">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-center text-xs">
                     {pipelineStages.map((stage, idx) => {
                       const isCompleted = idx <= currentIndex;
                       const isCurrent = idx === currentIndex;
+                      const isFuture = idx > currentIndex;
+                      const isSelectionStage = stage.key === 'SELECTED';
+                      const isRoundsPending =
+                        isFuture &&
+                        app.status === 'INTERVIEWING' &&
+                        !app.scoreCompletion?.selectionEligible;
+
+                      let badgeContent = isCompleted ? '✓' : idx + 1;
+                      let stageTitle = stage.label;
+                      let stageDisplayLabel = stage.label;
+
+                      if (isFuture) {
+                        badgeContent = <Lock className="w-3 h-3" />;
+                        if (isSelectionStage && isRoundsPending) {
+                          stageDisplayLabel = '4. Selected (LOCKED)';
+                          stageTitle = app.scoreCompletion?.readinessReason
+                            ? `Selected — LOCKED / ${app.scoreCompletion.readinessReason}`
+                            : 'Selected — LOCKED / Pending remaining rounds';
+                        } else {
+                          stageDisplayLabel = `${stage.label} (LOCKED)`;
+                          stageTitle = `${stage.label} — LOCKED`;
+                        }
+                      }
+
                       return (
-                        <div key={stage.key} className="space-y-1">
+                        <div key={stage.key} className="space-y-1" title={stageTitle}>
                           <div
                             className={`w-6 h-6 mx-auto rounded-full flex items-center justify-center text-[10px] font-bold ${
                               isCurrent
                                 ? 'bg-slate-900 text-white ring-4 ring-slate-200'
                                 : isCompleted
                                 ? 'bg-emerald-600 text-white'
-                                : 'bg-slate-200 text-slate-500'
+                                : isRoundsPending && isSelectionStage
+                                ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                : 'bg-slate-100 text-slate-400 border border-slate-200'
                             }`}
                           >
-                            {isCompleted ? '✓' : idx + 1}
+                            {badgeContent}
                           </div>
                           <span
                             className={`block text-[11px] font-semibold truncate ${
-                              isCurrent ? 'text-slate-900 font-bold' : isCompleted ? 'text-slate-700' : 'text-slate-400'
+                              isCurrent
+                                ? 'text-slate-900 font-bold'
+                                : isCompleted
+                                ? 'text-slate-700'
+                                : isRoundsPending && isSelectionStage
+                                ? 'text-amber-800 font-medium'
+                                : 'text-slate-400'
                             }`}
                           >
-                            {stage.label}
+                            {stageDisplayLabel}
                           </span>
+                          {isRoundsPending && isSelectionStage && (
+                            <span className="block text-[9px] text-amber-700 font-medium truncate">
+                              Pending rounds
+                            </span>
+                          )}
                         </div>
                       );
                     })}
                   </div>
+
+                  {/* Stage Lock Notice for Interviewing candidates */}
+                  {app.status === 'INTERVIEWING' && (
+                    <div className={`mt-3 p-3 rounded-lg text-xs flex items-start sm:items-center gap-2.5 ${
+                      app.scoreCompletion?.selectionEligible
+                        ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
+                        : 'bg-amber-50 text-amber-950 border border-amber-200'
+                    }`}>
+                      {app.scoreCompletion?.selectionEligible ? (
+                        <>
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5 sm:mt-0" />
+                          <div>
+                            <span className="font-bold">All Required Interview Rounds Cleared: </span>
+                            <span>Candidate has passed all mandatory drive rounds ({app.scoreCompletion.completedRounds}/{app.scoreCompletion.requiredRounds}). Eligible for final selection.</span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="w-4 h-4 text-amber-700 shrink-0 mt-0.5 sm:mt-0" />
+                          <div>
+                            <span className="font-bold">Selection & Offer Pipeline Locked: </span>
+                            <span>{app.scoreCompletion?.readinessReason || 'All required interview rounds must be scheduled, evaluated, and passed before candidate can be selected.'}</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 

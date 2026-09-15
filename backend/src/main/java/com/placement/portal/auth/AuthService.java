@@ -169,13 +169,23 @@ public class AuthService {
         String progId = program.getProgramId();
         String progName = program.getProgramName();
 
+        String street = (request.getStreet() != null && !request.getStreet().isBlank())
+                ? request.getStreet().trim()
+                : "Vandalur-Kelambakkam Road";
+        String city = (request.getCity() != null && !request.getCity().isBlank())
+                ? request.getCity().trim()
+                : "Chennai";
+        String state = (request.getState() != null && !request.getState().isBlank())
+                ? request.getState().trim()
+                : "Tamil Nadu";
+
         com.placement.portal.student.Student student = new com.placement.portal.student.Student(
                 studentId,
                 request.getName().trim(),
                 email,
-                request.getStreet().trim(),
-                request.getCity().trim(),
-                request.getState().trim(),
+                street,
+                city,
+                state,
                 request.getDob(),
                 request.getCgpa(),
                 progName,

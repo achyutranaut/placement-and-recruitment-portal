@@ -196,15 +196,19 @@ SELECT s.Student_Id, s.Name FROM STUDENT s JOIN APPLICATION a ON s.Student_Id = 
     sql: `-- Safe Demonstration DML — Strict NOT-NULL Guard Compliant (Mode: SCRIPT)
 -- 1. Insert test candidate providing all mandatory NOT NULL columns without default
 INSERT INTO STUDENT (
-    Student_Id, Name, Email, DOB, Program_Id, Branch, CGPA
+    Student_Id, Name, Email, Street, City, State, DOB, CGPA, Branch, Registration_No, Program_Id
 ) VALUES (
     'STU_DEMO_999',
     'Arun Kumar',
     'arun.kumar2026@vitstudent.ac.in',
+    '14 Kelambakkam Highway',
+    'Chennai',
+    'Tamil Nadu',
     TO_DATE('2004-05-15', 'YYYY-MM-DD'),
-    'BTECH-CSE',
+    8.75,
     'Computer Science and Engineering',
-    8.75
+    '25BCE9999',
+    'BTECH-CSE'
 );
 
 -- 2. Verify inserted candidate in Oracle

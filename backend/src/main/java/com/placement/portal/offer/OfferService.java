@@ -9,6 +9,8 @@ import com.placement.portal.company.EmailCompanyRepository;
 import com.placement.portal.company.JobCompanyRepository;
 import com.placement.portal.application.ApplicationAudit;
 import com.placement.portal.application.ApplicationAuditRepository;
+import com.placement.portal.application.ApplicationService;
+import com.placement.portal.application.SelectionEligibility;
 import com.placement.portal.recruitment.PlacementDrive;
 import com.placement.portal.recruitment.PlacementDriveRepository;
 import com.placement.portal.student.Student;
@@ -41,6 +43,7 @@ public class OfferService {
     private final EmailCompanyRepository emailCompanyRepository;
     private final com.placement.portal.auth.UserRepository userRepository;
     private final com.placement.portal.company.RecruiterCompanyRepository recruiterCompanyRepository;
+    private final ApplicationService applicationService;
 
     public OfferService(
             OfferRepository offerRepository,
@@ -54,7 +57,8 @@ public class OfferService {
             CompanyRepository companyRepository,
             EmailCompanyRepository emailCompanyRepository,
             com.placement.portal.auth.UserRepository userRepository,
-            com.placement.portal.company.RecruiterCompanyRepository recruiterCompanyRepository
+            com.placement.portal.company.RecruiterCompanyRepository recruiterCompanyRepository,
+            ApplicationService applicationService
     ) {
         this.offerRepository = offerRepository;
         this.offerJdbcDao = offerJdbcDao;
@@ -68,6 +72,7 @@ public class OfferService {
         this.emailCompanyRepository = emailCompanyRepository;
         this.userRepository = userRepository;
         this.recruiterCompanyRepository = recruiterCompanyRepository;
+        this.applicationService = applicationService;
     }
 
     @Transactional
@@ -85,8 +90,14 @@ public class OfferService {
             throw new IllegalStateException("An employment offer has already been issued for application: " + dto.getApplicationId());
         }
 
-        if (!"SELECTED".equalsIgnoreCase(app.getStatus()) && !"INTERVIEWING".equalsIgnoreCase(app.getStatus())) {
-            throw new IllegalStateException("Candidate must be in SELECTED or INTERVIEWING state to receive an offer. Current status: " + app.getStatus());
+        // Enforce strict placement state machine: Candidate must be SELECTED and all mandatory rounds cleared
+        if (!"SELECTED".equalsIgnoreCase(app.getStatus())) {
+            throw new IllegalStateException("Candidate must be in SELECTED state to receive an offer. Current status: " + app.getStatus());
+        }
+
+        SelectionEligibility readiness = applicationService.evaluateSelectionEligibility(dto.getApplicationId());
+        if (!readiness.isEligible()) {
+            throw new IllegalStateException("Cannot issue offer: " + readiness.getReason());
         }
 
         String resolvedDriveId = app.getDriveId();

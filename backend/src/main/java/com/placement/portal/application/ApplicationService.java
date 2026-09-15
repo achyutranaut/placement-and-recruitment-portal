@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -122,6 +123,135 @@ public class ApplicationService {
         return mapToDto(app);
     }
 
+    public boolean isApplicationEligibleForSelection(String applicationId) {
+        return evaluateSelectionEligibility(applicationId).isEligible();
+    }
+
+    public SelectionEligibility evaluateSelectionEligibility(String applicationId) {
+        Application app = applicationRepository.findById(applicationId)
+                .orElseThrow(() -> new IllegalArgumentException("Application not found: " + applicationId));
+        return evaluateSelectionEligibility(app);
+    }
+
+    public SelectionEligibility evaluateSelectionEligibility(Application app) {
+        if (app == null) {
+            return SelectionEligibility.notReady("Application is null", 0, 0, 0);
+        }
+
+        String driveId = app.getDriveId();
+        if (driveId == null || driveId.isBlank()) {
+            var routineOpt = dailyRoutineRepository.findByStudentIdAndApplyDate(app.getStudentId(), app.getApplyDate());
+            if (routineOpt.isPresent()) {
+                driveId = routineOpt.get().getDriveId();
+            }
+        }
+
+        if (driveId == null || driveId.isBlank()) {
+            return SelectionEligibility.notReady("NOT_READY: Application is not linked to any placement drive", 0, 0, 0);
+        }
+
+        var driveOpt = driveRepository.findById(driveId);
+        if (driveOpt.isEmpty()) {
+            return SelectionEligibility.notReady("NOT_READY: Placement drive " + driveId + " not found", 0, 0, 0);
+        }
+
+        PlacementDrive drive = driveOpt.get();
+        List<String> configuredRounds = parseConfiguredRounds(drive.getSelectionProcess());
+        int totalRequired = configuredRounds.size();
+        if (totalRequired == 0) totalRequired = 3;
+
+        List<Interview> rawInterviews = interviewRepository.findByApplicationId(app.getApplicationId());
+
+        int completedRounds = 0;
+        int passedRounds = 0;
+
+        for (int r = 1; r <= totalRequired; r++) {
+            String roundTitle = (r <= configuredRounds.size()) ? configuredRounds.get(r - 1) : ("Round " + r);
+
+            // Find interview matching round number r
+            final int currentRoundNo = r;
+            Interview matchingIv = null;
+
+            for (Interview iv : rawInterviews) {
+                Integer ivRoundNo = roundRepository.findById(iv.getInterviewerName())
+                        .map(InterviewerRound::getInterviewRoundNo).orElse(null);
+                if (ivRoundNo != null && ivRoundNo == currentRoundNo) {
+                    matchingIv = iv;
+                    break;
+                }
+            }
+
+            // Fallback for single-row interview structure
+            if (matchingIv == null) {
+                for (Interview iv : rawInterviews) {
+                    if ((currentRoundNo == 1 && iv.getOa() != null) ||
+                        (currentRoundNo == 2 && iv.getGd() != null) ||
+                        (currentRoundNo == 3 && iv.getHr() != null)) {
+                        matchingIv = iv;
+                        break;
+                    }
+                }
+            }
+
+            if (matchingIv == null) {
+                return SelectionEligibility.notReady("NOT_READY: " + roundTitle + " is pending / not scheduled", totalRequired, completedRounds, passedRounds);
+            }
+
+            String result = matchingIv.getResult() != null ? matchingIv.getResult().trim().toUpperCase() : "PENDING";
+            if ("PENDING".equals(result)) {
+                return SelectionEligibility.notReady("NOT_READY: " + roundTitle + " is still pending", totalRequired, completedRounds, passedRounds);
+            }
+
+            if ("REJECTED".equals(result) || "FAILED".equals(result)) {
+                return SelectionEligibility.notReady("NOT_READY: " + roundTitle + " was failed/rejected", totalRequired, completedRounds, passedRounds);
+            }
+
+            if (!"CLEARED".equals(result) && !"PASSED".equals(result)) {
+                return SelectionEligibility.notReady("NOT_READY: " + roundTitle + " has invalid status: " + result, totalRequired, completedRounds, passedRounds);
+            }
+
+            // Check that required score exists
+            BigDecimal score = getScoreForRound(matchingIv, currentRoundNo);
+            if (score == null) {
+                return SelectionEligibility.notReady("NOT_READY: " + roundTitle + " score is missing", totalRequired, completedRounds, passedRounds);
+            }
+
+            completedRounds++;
+            passedRounds++;
+        }
+
+        return SelectionEligibility.ready(totalRequired);
+    }
+
+    private BigDecimal getScoreForRound(Interview iv, int roundNo) {
+        if (roundNo == 1) return iv.getOa() != null ? iv.getOa() : (iv.getGd() != null ? iv.getGd() : iv.getHr());
+        if (roundNo == 2) return iv.getGd() != null ? iv.getGd() : (iv.getOa() != null ? iv.getOa() : iv.getHr());
+        if (roundNo == 3) return iv.getHr() != null ? iv.getHr() : (iv.getGd() != null ? iv.getGd() : iv.getOa());
+        return iv.getOa() != null ? iv.getOa() : (iv.getGd() != null ? iv.getGd() : iv.getHr());
+    }
+
+    public static List<String> parseConfiguredRounds(String selectionProcess) {
+        List<String> titles = new ArrayList<>();
+        if (selectionProcess == null || selectionProcess.isBlank()) {
+            titles.add("Round 1: Online Assessment (OA)");
+            titles.add("Round 2: Technical Interview");
+            titles.add("Round 3: HR Interview");
+            return titles;
+        }
+
+        String[] parts = selectionProcess.split("\\|");
+        for (String part : parts) {
+            String trimmed = part.trim();
+            if (!trimmed.isEmpty()) {
+                titles.add(trimmed);
+            }
+        }
+        if (titles.isEmpty()) {
+            titles.add("Round 1: Online Assessment");
+        }
+        return titles;
+    }
+
     @Transactional
     public ApplicationDto updateStatus(String applicationId, String newStatus, String changedBy) {
         Application app = applicationRepository.findById(applicationId)
@@ -129,6 +259,13 @@ public class ApplicationService {
 
         String oldStatus = app.getStatus();
         validateStatusTransition(oldStatus, newStatus);
+
+        if ("SELECTED".equalsIgnoreCase(newStatus)) {
+            SelectionEligibility eligibility = evaluateSelectionEligibility(app);
+            if (!eligibility.isEligible()) {
+                throw new IllegalStateException("Integrity Violation: Cannot transition candidate to SELECTED: " + eligibility.getReason());
+            }
+        }
 
         app.setStatus(newStatus.toUpperCase());
         Application saved = applicationRepository.save(app);
@@ -143,15 +280,20 @@ public class ApplicationService {
         if (oldStatus == null || newStatus == null) return;
         if (oldStatus.equalsIgnoreCase(newStatus)) return;
 
-        if ("OFFERED".equalsIgnoreCase(oldStatus) || "REJECTED".equalsIgnoreCase(oldStatus)) {
-            throw new IllegalStateException("Application is in terminal state '" + oldStatus + "' and cannot be updated to '" + newStatus + "'");
+        if ("ACCEPTED".equalsIgnoreCase(oldStatus) || "DECLINED".equalsIgnoreCase(oldStatus)) {
+            throw new IllegalStateException("Application is in finalized state '" + oldStatus + "' and cannot be updated to '" + newStatus + "'");
+        }
+
+        if ("REJECTED".equalsIgnoreCase(newStatus)) {
+            return; // Rejection allowed from any non-finalized state
         }
 
         boolean valid = switch (oldStatus.toUpperCase()) {
-            case "APPLIED" -> newStatus.equalsIgnoreCase("SHORTLISTED") || newStatus.equalsIgnoreCase("REJECTED");
-            case "SHORTLISTED" -> newStatus.equalsIgnoreCase("INTERVIEWING") || newStatus.equalsIgnoreCase("REJECTED");
-            case "INTERVIEWING" -> newStatus.equalsIgnoreCase("SELECTED") || newStatus.equalsIgnoreCase("REJECTED");
-            case "SELECTED" -> newStatus.equalsIgnoreCase("OFFERED") || newStatus.equalsIgnoreCase("REJECTED");
+            case "APPLIED" -> newStatus.equalsIgnoreCase("SHORTLISTED");
+            case "SHORTLISTED" -> newStatus.equalsIgnoreCase("INTERVIEWING");
+            case "INTERVIEWING" -> newStatus.equalsIgnoreCase("SELECTED");
+            case "SELECTED" -> newStatus.equalsIgnoreCase("OFFERED");
+            case "OFFERED" -> newStatus.equalsIgnoreCase("ACCEPTED") || newStatus.equalsIgnoreCase("DECLINED");
             default -> false;
         };
 
@@ -249,17 +391,15 @@ public class ApplicationService {
             }
         }
 
-        boolean allRoundsCompleted = oaCompleted && techCompleted && hrCompleted;
+        SelectionEligibility eligibility = evaluateSelectionEligibility(app);
 
-        // Self-heal: If an application is currently marked SELECTED but has not completed all 3 rounds and has no offer,
+        // Self-heal: If an application is currently marked SELECTED but has not completed all mandatory rounds,
         // revert it back to INTERVIEWING so candidate is not prematurely marked SELECTED.
-        if ("SELECTED".equalsIgnoreCase(app.getStatus()) && !rawInterviews.isEmpty() && !allRoundsCompleted) {
-            boolean hasOffer = offerRepository.findByApplicationId(app.getApplicationId()).isPresent();
-            if (!hasOffer) {
-                app.setStatus("INTERVIEWING");
-                applicationRepository.save(app);
-                dto.setStatus("INTERVIEWING");
-            }
+        if ("SELECTED".equalsIgnoreCase(app.getStatus()) && !eligibility.isEligible()) {
+            app.setStatus("INTERVIEWING");
+            applicationRepository.save(app);
+            dto.setStatus("INTERVIEWING");
+            auditRepository.save(new ApplicationAudit(app.getApplicationId(), "SELECTED", "INTERVIEWING", "AUTO_REVERT_INCOMPLETE_ROUNDS"));
         }
 
         // Authoritative Overall Score Rule:
@@ -287,7 +427,17 @@ public class ApplicationService {
         }
 
         dto.setScores(new ApplicationScoresDto(oaScore, techScore, hrScore, overallScore, completedRounds));
-        dto.setScoreCompletion(new ScoreCompletionDto(oaCompleted, techCompleted, hrCompleted, allRoundsCompleted));
+        dto.setScoreCompletion(new ScoreCompletionDto(
+                oaCompleted,
+                techCompleted,
+                hrCompleted,
+                eligibility.isEligible(),
+                eligibility.isEligible(),
+                eligibility.getReason(),
+                eligibility.getRequiredRounds(),
+                eligibility.getCompletedRounds(),
+                eligibility.getPassedRounds()
+        ));
 
         return dto;
     }

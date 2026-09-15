@@ -37,15 +37,12 @@ public class StudentRegisterRequest {
     @NotBlank(message = "Phone number is required")
     private String phone;
 
-    @NotBlank(message = "Street address is required")
     @Size(max = 150, message = "Street must not exceed 150 characters")
     private String street;
 
-    @NotBlank(message = "City is required")
     @Size(max = 50, message = "City must not exceed 50 characters")
     private String city;
 
-    @NotBlank(message = "State is required")
     @Size(max = 50, message = "State must not exceed 50 characters")
     private String state;
     private List<String> skills;

@@ -126,5 +126,13 @@ public class ApplicationDto {
     public void setInterviewPerformance(ApplicationScoresDto interviewPerformance) {
         this.scores = interviewPerformance;
     }
+
+    public boolean isSelectionEligible() {
+        return scoreCompletion != null && scoreCompletion.isSelectionEligible();
+    }
+
+    public String getReadinessReason() {
+        return scoreCompletion != null ? scoreCompletion.getReadinessReason() : null;
+    }
 }
 

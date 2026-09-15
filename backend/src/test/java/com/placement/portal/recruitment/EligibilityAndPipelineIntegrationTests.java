@@ -54,6 +54,21 @@ class EligibilityAndPipelineIntegrationTests {
     @Autowired
     private com.placement.portal.application.ApplicationRepository applicationRepository;
 
+    @Autowired
+    private com.placement.portal.interview.InterviewRepository interviewRepository;
+
+    private void clearInterviewRounds(String appId) {
+        interviewRepository.save(new com.placement.portal.interview.Interview(
+                appId, "Vikram Malhotra", BigDecimal.valueOf(90), null, null, "CLEARED", "Y", "N"
+        ));
+        interviewRepository.save(new com.placement.portal.interview.Interview(
+                appId, "Sangeeta Rao", null, BigDecimal.valueOf(88), null, "CLEARED", "Y", "N"
+        ));
+        interviewRepository.save(new com.placement.portal.interview.Interview(
+                appId, "Arvind Swamy", null, null, BigDecimal.valueOf(92), "CLEARED", "Y", "N"
+        ));
+    }
+
     // ============================================================
     // BUG #1 TEST SUITE: 6 Authoritative Eligibility Scenarios
     // ============================================================
@@ -517,6 +532,7 @@ class EligibilityAndPipelineIntegrationTests {
                 "APP_TEST_TCS", "STU001", "DRV002", LocalDate.now(), "SELECTED"
         );
         applicationRepository.save(app);
+        clearInterviewRounds("APP_TEST_TCS");
 
         com.placement.portal.offer.IssueOfferDto dto = new com.placement.portal.offer.IssueOfferDto(
                 "APP_TEST_TCS", null, LocalDate.now()
@@ -545,6 +561,7 @@ class EligibilityAndPipelineIntegrationTests {
                 "APP_TEST_MS", "STU002", "DRV001", LocalDate.now(), "SELECTED"
         );
         applicationRepository.save(app);
+        clearInterviewRounds("APP_TEST_MS");
 
         com.placement.portal.offer.IssueOfferDto dto = new com.placement.portal.offer.IssueOfferDto(
                 "APP_TEST_MS", null, LocalDate.now()
@@ -564,6 +581,7 @@ class EligibilityAndPipelineIntegrationTests {
                 "APP_TEST_DUP", "STU003", "DRV002", LocalDate.now(), "SELECTED"
         );
         applicationRepository.save(app);
+        clearInterviewRounds("APP_TEST_DUP");
 
         com.placement.portal.offer.IssueOfferDto dto = new com.placement.portal.offer.IssueOfferDto(
                 "APP_TEST_DUP", null, LocalDate.now()
@@ -585,6 +603,7 @@ class EligibilityAndPipelineIntegrationTests {
                 "APP_API_TEST", "STU004", "DRV002", LocalDate.now(), "SELECTED"
         );
         applicationRepository.save(app);
+        clearInterviewRounds("APP_API_TEST");
 
         String jsonPayload = """
             {

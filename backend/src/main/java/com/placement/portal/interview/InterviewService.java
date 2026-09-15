@@ -4,6 +4,7 @@ import com.placement.portal.application.Application;
 import com.placement.portal.application.ApplicationAudit;
 import com.placement.portal.application.ApplicationAuditRepository;
 import com.placement.portal.application.ApplicationRepository;
+import com.placement.portal.application.ApplicationService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,19 +19,22 @@ public class InterviewService {
     private final InterviewJdbcDao interviewJdbcDao;
     private final ApplicationRepository applicationRepository;
     private final ApplicationAuditRepository auditRepository;
+    private final ApplicationService applicationService;
 
     public InterviewService(
             InterviewRepository interviewRepository,
             InterviewerRoundRepository roundRepository,
             InterviewJdbcDao interviewJdbcDao,
             ApplicationRepository applicationRepository,
-            ApplicationAuditRepository auditRepository
+            ApplicationAuditRepository auditRepository,
+            ApplicationService applicationService
     ) {
         this.interviewRepository = interviewRepository;
         this.roundRepository = roundRepository;
         this.interviewJdbcDao = interviewJdbcDao;
         this.applicationRepository = applicationRepository;
         this.auditRepository = auditRepository;
+        this.applicationService = applicationService;
     }
 
     @Transactional
@@ -105,7 +109,7 @@ public class InterviewService {
             if ("REJECTED".equals(normalizedResult)) {
                 newStatus = "REJECTED";
             } else if ("CLEARED".equals(normalizedResult)) {
-                if (areAllThreeRoundsCleared(applicationId)) {
+                if (applicationService.isApplicationEligibleForSelection(applicationId)) {
                     newStatus = "SELECTED";
                 } else {
                     newStatus = "INTERVIEWING";
@@ -123,43 +127,7 @@ public class InterviewService {
     }
 
     public boolean areAllThreeRoundsCleared(String applicationId) {
-        List<Interview> allInterviews = interviewRepository.findByApplicationId(applicationId);
-        if (allInterviews.isEmpty()) {
-            return false;
-        }
-
-        boolean round1Cleared = false;
-        boolean round2Cleared = false;
-        boolean round3Cleared = false;
-
-        for (Interview iv : allInterviews) {
-            boolean isCleared = "CLEARED".equalsIgnoreCase(iv.getResult()) || "PASSED".equalsIgnoreCase(iv.getResult());
-            if (!isCleared) {
-                continue;
-            }
-
-            Integer roundNo = roundRepository.findById(iv.getInterviewerName())
-                    .map(InterviewerRound::getInterviewRoundNo).orElse(null);
-
-            if (roundNo != null) {
-                if (roundNo == 1 && (iv.getOa() != null || iv.getGd() != null || iv.getHr() != null)) {
-                    round1Cleared = true;
-                } else if (roundNo == 2 && (iv.getGd() != null || iv.getOa() != null || iv.getHr() != null)) {
-                    round2Cleared = true;
-                } else if (roundNo == 3 && (iv.getHr() != null || iv.getOa() != null || iv.getGd() != null)) {
-                    round3Cleared = true;
-                }
-            }
-
-            // Also support single-row interview where all 3 scores are populated
-            if (iv.getOa() != null && iv.getGd() != null && iv.getHr() != null) {
-                round1Cleared = true;
-                round2Cleared = true;
-                round3Cleared = true;
-            }
-        }
-
-        return round1Cleared && round2Cleared && round3Cleared;
+        return applicationService.isApplicationEligibleForSelection(applicationId);
     }
 
     private InterviewDto mapToDto(Interview i) {

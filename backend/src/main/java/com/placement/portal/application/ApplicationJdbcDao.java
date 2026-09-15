@@ -114,8 +114,8 @@ public class ApplicationJdbcDao {
                         studentId, Date.valueOf(date), driveId
                 );
                 jdbcTemplate.update(
-                        "INSERT INTO APPLICATION (Application_Id, Student_Id, Apply_Date, Status) VALUES (?, ?, ?, 'APPLIED')",
-                        appId, studentId, Date.valueOf(date)
+                        "INSERT INTO APPLICATION (Application_Id, Student_Id, Drive_Id, Apply_Date, Status) VALUES (?, ?, ?, ?, 'APPLIED')",
+                        appId, studentId, driveId, Date.valueOf(date)
                 );
                 log.info("H2 simulated APPLY_FOR_DRIVE generated Application ID: {}", appId);
                 return appId;

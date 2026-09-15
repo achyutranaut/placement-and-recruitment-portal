@@ -100,6 +100,13 @@ public class SqlDataIntegrityValidator {
             return ValidationResult.passed(); // Custom or non-existent table, let Oracle engine evaluate
         }
 
+        if ("OFFER_LETTER".equalsIgnoreCase(rawTableName)) {
+            ValidationResult smResult = validateOfferLetterInsert(conn, sql, rawColumns, rawValues);
+            if (!smResult.isPassed()) {
+                return smResult;
+            }
+        }
+
         if (rawColumns != null && !rawColumns.isBlank()) {
             List<String> suppliedCols = parseCommaTokens(rawColumns);
             List<String> normalizedSuppliedCols = suppliedCols.stream()
@@ -183,6 +190,13 @@ public class SqlDataIntegrityValidator {
             return ValidationResult.passed();
         }
 
+        if ("APPLICATION".equalsIgnoreCase(rawTableName)) {
+            ValidationResult smResult = validateApplicationStatusUpdate(conn, sql, setClause);
+            if (!smResult.isPassed()) {
+                return smResult;
+            }
+        }
+
         List<String> assignments = parseCommaTokens(setClause);
         for (String assign : assignments) {
             String[] parts = assign.split("=", 2);
@@ -202,6 +216,136 @@ public class SqlDataIntegrityValidator {
                         return ValidationResult.blocked(msg, "Attempted to UPDATE NOT NULL column to NULL: " + col.getName());
                     }
                 }
+            }
+        }
+
+        return ValidationResult.passed();
+    }
+
+    private static ValidationResult validateApplicationStatusUpdate(Connection conn, String sql, String setClause) {
+        String targetStatus = null;
+        List<String> assignments = parseCommaTokens(setClause);
+        for (String assign : assignments) {
+            String[] parts = assign.split("=", 2);
+            if (parts.length == 2 && parts[0].replace("\"", "").trim().equalsIgnoreCase("STATUS")) {
+                targetStatus = parts[1].replace("'", "").replace("\"", "").trim().toUpperCase();
+                break;
+            }
+        }
+
+        if (targetStatus == null) {
+            return ValidationResult.passed();
+        }
+
+        // Extract application ID if present in WHERE clause
+        Matcher appMatcher = Pattern.compile("(?i)Application_Id\\s*=\\s*'?([a-zA-Z0-9_-]+)'?").matcher(sql);
+        String appId = appMatcher.find() ? appMatcher.group(1).trim() : null;
+
+        if (appId != null) {
+            String currStatus = null;
+            try (PreparedStatement ps = conn.prepareStatement("SELECT Status FROM APPLICATION WHERE Application_Id = ?")) {
+                ps.setString(1, appId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        currStatus = rs.getString(1);
+                    }
+                }
+            } catch (Exception ignored) {}
+
+            if (currStatus != null) {
+                currStatus = currStatus.toUpperCase();
+
+                if ("SELECTED".equals(targetStatus)) {
+                    if (!"INTERVIEWING".equals(currStatus)) {
+                        String msg = String.format(
+                                "EXECUTION BLOCKED: Placement Pipeline State Machine Violation\n\n" +
+                                "Cannot transition application %s from %s to SELECTED.\n" +
+                                "Candidate must progress through SHORTLISTED -> INTERVIEWING first.",
+                                appId, currStatus
+                        );
+                        return ValidationResult.blocked(msg, "Invalid transition: " + currStatus + " -> SELECTED");
+                    }
+
+                    // Check PL/SQL readiness if available
+                    try (PreparedStatement ps = conn.prepareStatement("SELECT GET_APPLICATION_READINESS(?) FROM DUAL")) {
+                        ps.setString(1, appId);
+                        try (ResultSet rs = ps.executeQuery()) {
+                            if (rs.next()) {
+                                String readiness = rs.getString(1);
+                                if (readiness != null && !readiness.startsWith("READY")) {
+                                    String msg = String.format(
+                                            "EXECUTION BLOCKED: Placement Pipeline State Machine Violation\n\n" +
+                                            "Candidate %s is not eligible for selection:\n%s\n\n" +
+                                            "All mandatory interview rounds must be completed with passing results.",
+                                            appId, readiness
+                                    );
+                                    return ValidationResult.blocked(msg, readiness);
+                                }
+                            }
+                        }
+                    } catch (Exception ignored) {}
+                } else if ("OFFERED".equals(targetStatus) && !"SELECTED".equals(currStatus)) {
+                    String msg = String.format(
+                            "EXECUTION BLOCKED: Placement Pipeline State Machine Violation\n\n" +
+                            "Cannot transition application %s from %s to OFFERED.\n" +
+                            "An offer can only be released after candidate is formally SELECTED.",
+                            appId, currStatus
+                    );
+                    return ValidationResult.blocked(msg, "Invalid transition: " + currStatus + " -> OFFERED");
+                } else if ("ACCEPTED".equals(targetStatus) && !"OFFERED".equals(currStatus)) {
+                    String msg = String.format(
+                            "EXECUTION BLOCKED: Placement Pipeline State Machine Violation\n\n" +
+                            "Cannot transition application %s from %s to ACCEPTED.\n" +
+                            "An offer must exist in OFFERED status before it can be accepted.",
+                            appId, currStatus
+                    );
+                    return ValidationResult.blocked(msg, "Invalid transition: " + currStatus + " -> ACCEPTED");
+                }
+            }
+        }
+
+        return ValidationResult.passed();
+    }
+
+    private static ValidationResult validateOfferLetterInsert(Connection conn, String sql, String rawColumns, String rawValues) {
+        String appId = null;
+        if (rawColumns != null && rawValues != null) {
+            List<String> cols = parseCommaTokens(rawColumns);
+            List<String> vals = parseCommaTokens(rawValues);
+            for (int i = 0; i < Math.min(cols.size(), vals.size()); i++) {
+                if (cols.get(i).replace("\"", "").trim().equalsIgnoreCase("APPLICATION_ID")) {
+                    appId = vals.get(i).replace("'", "").replace("\"", "").trim();
+                    break;
+                }
+            }
+        }
+
+        if (appId == null) {
+            Matcher m = Pattern.compile("(?i)'?(APP[0-9]+)'?").matcher(sql);
+            if (m.find()) {
+                appId = m.group(1).trim();
+            }
+        }
+
+        if (appId != null) {
+            String appStatus = null;
+            try (PreparedStatement ps = conn.prepareStatement("SELECT Status FROM APPLICATION WHERE Application_Id = ?")) {
+                ps.setString(1, appId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        appStatus = rs.getString(1);
+                    }
+                }
+            } catch (Exception ignored) {}
+
+            if (appStatus != null && !"SELECTED".equalsIgnoreCase(appStatus)) {
+                String msg = String.format(
+                        "EXECUTION BLOCKED: Placement Pipeline State Machine Violation\n\n" +
+                        "Cannot issue offer for application %s: Current status is %s, but must be SELECTED.\n" +
+                        "Direct offer creation bypassing the interview process is strictly prohibited.",
+                        appId, appStatus
+                );
+                return ValidationResult.blocked(msg, "Cannot issue offer for non-SELECTED application");
             }
         }
 
