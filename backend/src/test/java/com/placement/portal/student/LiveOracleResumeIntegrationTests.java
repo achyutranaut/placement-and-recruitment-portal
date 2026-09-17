@@ -2,6 +2,7 @@ package com.placement.portal.student;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -10,6 +11,8 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
@@ -21,7 +24,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("oracle")
+@EnabledIf(value = "isOracleAvailable", disabledReason = "Requires a live Oracle database listener at localhost:1521")
 public class LiveOracleResumeIntegrationTests {
+
+    static boolean isOracleAvailable() {
+        String host = System.getProperty("oracle.host", System.getenv().getOrDefault("ORACLE_HOST", "localhost"));
+        int port = 1521;
+        try {
+            port = Integer.parseInt(System.getProperty("oracle.port", System.getenv().getOrDefault("ORACLE_PORT", "1521")));
+        } catch (NumberFormatException ignored) {}
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(host, port), 500);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
 
     @Autowired
     private MockMvc mockMvc;
