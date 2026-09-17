@@ -34,9 +34,15 @@ import java.util.Map;
  * Test Fixture Initializer - ISOLATED TO TEST SLICE ONLY.
  * This class ensures that unit and integration tests under src/test/java have predictable
  * test fixtures available in H2 without polluting the production runtime.
+ *
+ * ONLY activated for the "h2" profile. Oracle-profile integration tests
+ * (e.g. LiveOracleResumeIntegrationTests) connect to a live Oracle database that
+ * already contains real data (STU023, APP036, etc.) and must NOT have mock
+ * H2 fixtures grafted on top of them.
  */
 @Component
 @Order(2)
+@org.springframework.context.annotation.Profile("h2")
 public class TestFixturesInitializer implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(TestFixturesInitializer.class);

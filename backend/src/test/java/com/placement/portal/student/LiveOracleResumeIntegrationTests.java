@@ -57,7 +57,11 @@ public class LiveOracleResumeIntegrationTests {
         int uploadedVersionNo = json.path("data").path("versionNo").asInt();
 
         assertNotNull(uploadedResumeId, "Uploaded resume ID must not be null");
-        assertTrue(uploadedVersionNo >= 7, "Uploaded version must be >= 7");
+        // Version must be a positive integer greater than zero. STU023 always
+        // has at least one prior resume version (V1) seeded in Oracle, so a new
+        // upload must be >= 2. Use a lower bound that holds across repeated runs
+        // on a persistent Oracle database — never hardcode an upper-run count.
+        assertTrue(uploadedVersionNo >= 2, "Uploaded version must be >= 2 (STU023 already has V1 in Oracle)");
 
         // Step 2: Query the live Oracle database repository to confirm row and BLOB exist
         Optional<StudentResume> inDbOpt = resumeRepository.findById(uploadedResumeId);
