@@ -34,6 +34,175 @@ The **VIT Student Placement & Recruitment Portal** is a production-grade enterpr
 
 ## 2. Authoritative Oracle Architecture (Zero Mock Policy)
 
+The following system architecture flowchart illustrates the end-to-end stack topology—from client-side personas and React 19 UI down through the Spring Boot 3.4 modular monolith, dual persistence layer, authoritative Oracle Database 23ai engine, automated PL/SQL procedures, and containerized runtime infrastructure:
+
+```mermaid
+flowchart TD
+    %% ============================================================
+    %% 1. PRESENTATION LAYER (CLIENT TIER)
+    %% ============================================================
+    subgraph PresentationTier ["1. Presentation Layer (Client Tier - Port 3000)"]
+        direction TB
+
+        subgraph UserPersonas ["Authenticated User Personas"]
+            StudentRole["🎓 Student Persona (ROLE_STUDENT)<br/>• Resume BLOB Upload & Verification<br/>• Drive Eligibility Check & 1/Day Apply<br/>• Offer Acceptance & PDF Download"]
+            RecruiterRole["🏢 Recruiter Persona (ROLE_RECRUITER)<br/>• Drive Applicant Tracking Pipeline<br/>• Multi-Round Technical Scoring<br/>• Official Employment Offer Issuance"]
+            AdminRole["🛡️ Admin / Faculty (ROLE_ADMIN)<br/>• Placement Analytics KPI Dashboard<br/>• Live Audit Journal Inspection<br/>• In-Browser SQL / PLSQL Compiler"]
+        end
+
+        subgraph FrontendCore ["React 19 + Vite Frontend SPA"]
+            UIComponents["React 19 Core & React Router v7<br/>• Tailwind CSS v4 & Lucide Icons<br/>• Monaco-Style SQL & PL/SQL Editor<br/>• Real-Time DBMS_OUTPUT Console Stream"]
+            ApiClient["HTTP API Client & Vite Proxy<br/>• Vite Reverse Proxy (/api ➔ :8080)<br/>• Stateless JWT Bearer Token Injection<br/>• Unified Response & Error Interceptor"]
+            UIComponents --> ApiClient
+        end
+
+        StudentRole --> UIComponents
+        RecruiterRole --> UIComponents
+        AdminRole --> UIComponents
+    end
+
+    %% ============================================================
+    %% TRANSPORT LAYER
+    %% ============================================================
+    ApiClient -->|"HTTPS / REST (JSON) + JWT Bearer Token"| SecurityFilter
+
+    %% ============================================================
+    %% 2. APPLICATION BACKEND LAYER (SPRING BOOT 3.4.3 MONOLITH)
+    %% ============================================================
+    subgraph BackendTier ["2. Application Layer (Spring Boot 3.4.3 Modular Monolith - Port 8080 / Java 21)"]
+        direction TB
+
+        subgraph SecurityModule ["Spring Security 6.x & JWT Gateway"]
+            SecurityFilter["Stateless JWT Authentication Filter<br/>• jjwt (io.jsonwebtoken 0.12.6)<br/>• BCrypt Password Encryption (12 Salt Rounds)<br/>• Method Security: @PreAuthorize (RBAC)"]
+        end
+
+        subgraph DispatcherModule ["Spring MVC Dispatcher & REST Controllers (/api/v1/*)"]
+            DispatcherServlet["Spring MVC DispatcherServlet<br/>• URI Routing & Content Negotiation"]
+            CtrlAuth["AuthController<br/>• /api/v1/auth (Login, Register, Token Refresh)"]
+            CtrlStudent["Student & ResumeController<br/>• /api/v1/students (Profiles, BLOB Upload/Stream)"]
+            CtrlRecruit["PlacementDrive & RecruiterController<br/>• /api/v1/drives, /api/v1/recruiter (Applications, Shortlisting)"]
+            CtrlApp["Application & InterviewController<br/>• /api/v1/applications, /api/v1/interviews (Stages, Rounds)"]
+            CtrlOffer["OfferController<br/>• /api/v1/offers (Apache PDFBox Dynamic Letters)"]
+            CtrlCompiler["SqlCompilerController<br/>• /api/v1/admin/sql (Dynamic ResultSetMetaData & Output)"]
+            CtrlReports["Report & AdminController<br/>• /api/v1/reports, /api/v1/admin (KPIs, Audit Logs)"]
+
+            DispatcherServlet --> CtrlAuth
+            DispatcherServlet --> CtrlStudent
+            DispatcherServlet --> CtrlRecruit
+            DispatcherServlet --> CtrlApp
+            DispatcherServlet --> CtrlOffer
+            DispatcherServlet --> CtrlCompiler
+            DispatcherServlet --> CtrlReports
+        end
+
+        subgraph ServiceModule ["Service Layer (@Transactional Business Boundaries)"]
+            DomainServices["Modular Domain Services<br/>• AuthService, StudentService, ProgramService<br/>• RecruitmentService, ApplicationService<br/>• InterviewService, OfferService, ReportService<br/>• SqlCompilerService (DBMS_OUTPUT Buffer Extraction)"]
+        end
+
+        subgraph PersistenceModule ["Dual-Access Persistence Layer"]
+            JPAAccess["Spring Data JPA / Hibernate<br/>• Standard CRUD & Relational Mapping<br/>• Entity Lifecycle Management<br/>• Declarative Cascades & Fetch Strategies"]
+            JDBCAccess["Spring JDBC (JdbcTemplate & SimpleJdbcCall)<br/>• Transactional PL/SQL Stored Procedures<br/>• Analytical Functions & Ref Cursors<br/>• Dynamic SQL Compiler Execution"]
+        end
+
+        SecurityFilter --> DispatcherServlet
+        CtrlAuth --> DomainServices
+        CtrlStudent --> DomainServices
+        CtrlRecruit --> DomainServices
+        CtrlApp --> DomainServices
+        CtrlOffer --> DomainServices
+        CtrlCompiler --> DomainServices
+        CtrlReports --> DomainServices
+        DomainServices --> JPAAccess
+        DomainServices --> JDBCAccess
+    end
+
+    %% ============================================================
+    %% DATABASE CONNECTION POOL
+    %% ============================================================
+    JPAAccess -->|"HikariCP Connection Pool (OJDBC 11 Driver)"| NetListener
+    JDBCAccess -->|"ACID PL/SQL Dispatch & Ref Cursor Streaming"| NetListener
+
+    %% ============================================================
+    %% 3. ORACLE DATABASE 23ai FREE ENGINE
+    %% ============================================================
+    subgraph DatabaseTier ["3. Authoritative Database Engine (Oracle Database 23ai Free / 21c XE - Port 1521)"]
+        direction TB
+
+        NetListener["Oracle Net Listener (Port 1521 / Service: FREEPDB1)<br/>• Dedicated Server Process Architecture"]
+
+        subgraph PDBEngine ["Pluggable Database: FREEPDB1"]
+            subgraph RelationalTables ["27 Relational Tables (BCNF Normalized Schema)"]
+                AcademicData["Academic Core Tables<br/>• STUDENT, PROGRAM, BATCH<br/>• STUDENT_PHONE, REGISTERS<br/>• STUDENT_RESUME (PDF Stored as BLOB)"]
+                RecruitmentData["Recruitment & Eligibility Tables<br/>• COMPANY, JOB_POSTING<br/>• PLACEMENT_DRIVE, DRIVE_ELIGIBILITY<br/>• STUDENT_DAILY_ROUTINE_DRIVE"]
+                PipelineData["Evaluation & Offers Tables<br/>• APPLICATION, INTERVIEW<br/>• INTERVIEWER_ROUND, RESUME_EVALUATION<br/>• OFFER_LETTER, OFFER_ACCEPTANCE"]
+                AuditData["System Audit Journal<br/>• APPLICATION_AUDIT"]
+            end
+
+            subgraph PLSQLSubsystem ["PL/SQL Autonomic Engine"]
+                Procedures["Transactional Stored Procedures<br/>• REGISTER_STUDENT_PROGRAM (Prereq & Batch Assign)<br/>• APPLY_FOR_DRIVE (CGPA & 1/Day Rule with Savepoint)<br/>• SCHEDULE_INTERVIEW (Round Routing & Pinning)<br/>• ISSUE_OFFER (Atomic Stage & Offer Sync)"]
+                Functions["Computational Functions & Ref Cursors<br/>• GET_PLACEMENT_RATE() (Live Percentage Calculation)<br/>• GET_AVERAGE_PACKAGE() (Aggregated Mean CTC)<br/>• GET_ELIGIBLE_STUDENTS() (SYS_REFCURSOR)"]
+                Triggers["Autonomic Database Triggers<br/>• TRG_OFFER_APPLICATION_STATUS (Auto-transitions status)<br/>• TRG_APPLICATION_AUDIT (Before/After journal records)<br/>• TRG_OFFER_ACCEPTANCE_ATOMIC (Single-offer lock)"]
+            end
+
+            subgraph AnalyticsData ["Analytical Views & Data Dictionary"]
+                Views["Analytical Views<br/>• VW_PLACEMENT_SUMMARY, VW_STUDENT_ELIGIBILITY<br/>• VW_DRIVE_METRICS, VW_OFFER_ANALYSIS"]
+                Dict["Oracle Data Dictionary (Metadata Catalog)<br/>• USER_TABLES, USER_VIEWS, USER_OBJECTS<br/>• USER_CONSTRAINTS, USER_TAB_COLS"]
+            end
+        end
+
+        subgraph MigrationSubsystem ["Database Schema Evolution"]
+            FlywayEngine["Flyway Migration Engine (flyway-core + flyway-database-oracle)<br/>• V1-V22 Versioned Incremental DDL/DML Migrations<br/>• Repeatable Functions, Procedures & Triggers"]
+        end
+
+        NetListener --> AcademicData
+        NetListener --> RecruitmentData
+        NetListener --> PipelineData
+        NetListener --> AuditData
+        NetListener --> Procedures
+        NetListener --> Functions
+        NetListener --> Views
+        NetListener --> Dict
+
+        Procedures --> PipelineData
+        Triggers --> PipelineData
+        Triggers --> AuditData
+
+        FlywayEngine -.->|"Initializes & Migrates Database Schema"| NetListener
+    end
+
+    %% ============================================================
+    %% 4. DEVOPS, RUNTIME & OBSERVABILITY
+    %% ============================================================
+    subgraph DevOpsTier ["4. DevOps, Infrastructure & Observability"]
+        DockerContainer["Docker Container Engine<br/>• oracle-free (Oracle Database 23ai Free Image @ Port 1521)"]
+        LauncherScript["./run_portal.sh<br/>• Environment Pre-flight & Port Probing<br/>• Full-Stack Background Process Launcher"]
+        ActuatorMetrics["Spring Boot Actuator & Micrometer<br/>• /actuator/health (Health Indicator)<br/>• /actuator/prometheus (JVM & DB Metrics)"]
+        OpenApiDocs["Springdoc OpenAPI 3.0 & Swagger UI<br/>• /swagger-ui.html (Interactive API Spec)"]
+
+        DockerContainer -.->|"Containers Database Instance"| NetListener
+        LauncherScript -.->|"1. Verifies Oracle Listener"| DockerContainer
+        LauncherScript -.->|"2. Runs mvn spring-boot:run"| SecurityFilter
+        LauncherScript -.->|"3. Runs npm run dev"| UIComponents
+        DispatcherServlet -.-> ActuatorMetrics
+        DispatcherServlet -.-> OpenApiDocs
+    end
+
+    %% ============================================================
+    %% CLASS STYLING
+    %% ============================================================
+    classDef client fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0369a1;
+    classDef backend fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e;
+    classDef db fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#991b1b;
+    classDef infra fill:#f3e8ff,stroke:#9333ea,stroke-width:2px,color:#6b21a8;
+
+    class StudentRole,RecruiterRole,AdminRole,UIComponents,ApiClient client;
+    class SecurityFilter,DispatcherServlet,CtrlAuth,CtrlStudent,CtrlRecruit,CtrlApp,CtrlOffer,CtrlCompiler,CtrlReports,DomainServices,JPAAccess,JDBCAccess backend;
+    class NetListener,AcademicData,RecruitmentData,PipelineData,AuditData,Procedures,Functions,Triggers,Views,Dict,FlywayEngine db;
+    class DockerContainer,LauncherScript,ActuatorMetrics,OpenApiDocs infra;
+```
+
+### High-Level Topology Schematic
+
 ```
                               [ USER WEB BROWSER / CLIENT ]
                                             |
