@@ -1,0 +1,18 @@
+{
+  "name": "student-placement-recruitment-portal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Student Placement and Recruitment Portal - VIT Placement Cell",
+  "scripts": {
+    "dev": "./run_portal.sh",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:h2": "npm --prefix backend run dev:h2",
+    "dev:oracle": "npm --prefix backend run dev:oracle",
+    "dev:all": "./run_portal.sh",
+    "start": "./run_portal.sh",
+    "build": "npm --prefix frontend run build && npm --prefix backend run build",
+    "build:frontend": "npm --prefix frontend run build",
+    "build:backend": "npm --prefix backend run build"
+  }
+}

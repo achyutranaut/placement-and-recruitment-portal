@@ -1,0 +1,14 @@
+{
+  "name": "student-placement-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Spring Boot backend runner scripts",
+  "scripts": {
+    "dev": "./run.sh",
+    "dev:h2": "./run.sh h2",
+    "dev:oracle": "./run.sh oracle",
+    "start": "./run.sh",
+    "build": "./mvnw clean package -DskipTests",
+    "test": "./mvnw test"
+  }
+}
