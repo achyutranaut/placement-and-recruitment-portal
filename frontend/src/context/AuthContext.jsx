@@ -17,6 +17,7 @@ export function AuthProvider({ children }) {
   const [authorizedCompanies, setAuthorizedCompanies] = useState([]);
   const [isBackendLive, setIsBackendLive] = useState(false);
   const [checkingBackend, setCheckingBackend] = useState(true);
+  const [backendInfo, setBackendInfo] = useState(null);
 
   const fetchRecruiterCompanies = async (currentUser) => {
     if (currentUser?.role === 'ROLE_RECRUITER') {
@@ -63,6 +64,14 @@ export function AuthProvider({ children }) {
       const live = await checkBackendHealth();
       setIsBackendLive(live);
       setCheckingBackend(false);
+      if (live) {
+        try {
+          const info = await api.getBackendInfo();
+          setBackendInfo(info);
+        } catch (e) {
+          console.warn('Could not load backend info:', e);
+        }
+      }
       if (user?.role === 'ROLE_RECRUITER') {
         await fetchRecruiterCompanies(user);
       }
@@ -71,6 +80,14 @@ export function AuthProvider({ children }) {
     const interval = setInterval(async () => {
       const live = await checkBackendHealth();
       setIsBackendLive(live);
+      if (live && !backendInfo) {
+        try {
+          const info = await api.getBackendInfo();
+          setBackendInfo(info);
+        } catch (e) {
+          console.warn('Could not load backend info:', e);
+        }
+      }
     }, 15000);
     return () => clearInterval(interval);
   }, []);
@@ -170,6 +187,7 @@ export function AuthProvider({ children }) {
         logout,
         isBackendLive,
         checkingBackend,
+        backendInfo,
       }}
     >
       {children}

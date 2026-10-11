@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 
 export default function Navbar() {
-  const { user, logout, isBackendLive } = useAuth();
+  const { user, logout, isBackendLive, backendInfo } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -208,7 +208,9 @@ export default function Navbar() {
                 }`}
               />
               <span className="hidden sm:inline">
-                {isBackendLive ? 'Oracle Database • Connected' : 'Disconnected'}
+                {isBackendLive
+                  ? (backendInfo?.databaseProduct ? `${backendInfo.databaseProduct} • Online` : 'Database Connected')
+                  : 'Disconnected'}
               </span>
             </div>
 

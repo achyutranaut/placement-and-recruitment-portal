@@ -36,6 +36,12 @@ export default function GraphViewPage() {
   useEffect(() => {
     loadBackendInfo();
     loadGraphData();
+    return () => {
+      if (networkInstanceRef.current) {
+        networkInstanceRef.current.destroy();
+        networkInstanceRef.current = null;
+      }
+    };
   }, [studentId]);
 
   const loadBackendInfo = async () => {
@@ -445,18 +451,19 @@ export default function GraphViewPage() {
             </div>
           </div>
 
-          <div
-            ref={containerRef}
-            className="w-full h-[540px] bg-slate-900 rounded-lg border border-slate-800 relative cursor-grab active:cursor-grabbing"
-          >
+          <div className="w-full h-[540px] bg-slate-900 rounded-lg border border-slate-800 relative">
             {loading && (
-              <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-10">
+              <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-10 pointer-events-none">
                 <div className="flex flex-col items-center gap-2 text-white">
                   <RefreshCw className="w-7 h-7 animate-spin text-indigo-400" />
                   <span className="text-xs font-medium">Traversing Neo4j Graph Relationships...</span>
                 </div>
               </div>
             )}
+            <div
+              ref={containerRef}
+              className="w-full h-full cursor-grab active:cursor-grabbing"
+            />
           </div>
           <p className="mt-2 text-[11px] text-slate-400 text-center">
             Tip: Scroll to zoom • Drag to pan • Click any node or relationship to inspect its graph properties.
