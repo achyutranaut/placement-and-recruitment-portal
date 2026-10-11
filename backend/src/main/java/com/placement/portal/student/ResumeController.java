@@ -15,25 +15,29 @@ import java.io.IOException;
 import java.security.Principal;
 import java.util.List;
 
+import com.placement.portal.auth.IUserContextService;
+import com.placement.portal.auth.PortalUserDto;
+import com.placement.portal.company.RecruiterAuthorizationService;
+
 @RestController
 @RequestMapping("/api/v1/resumes")
 @Tag(name = "Resumes", description = "Student resume binary upload, versioning, and download")
 public class ResumeController {
 
-    private final ResumeService resumeService;
-    private final UserRepository userRepository;
-    private final StudentRepository studentRepository;
-    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+    private final IResumeService resumeService;
+    private final IUserContextService userContextService;
+    private final IStudentService studentService;
+    private final RecruiterAuthorizationService recruiterAuthService;
 
     public ResumeController(
-            ResumeService resumeService,
-            UserRepository userRepository,
-            StudentRepository studentRepository,
-            org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
+            IResumeService resumeService,
+            IUserContextService userContextService,
+            IStudentService studentService,
+            RecruiterAuthorizationService recruiterAuthService) {
         this.resumeService = resumeService;
-        this.userRepository = userRepository;
-        this.studentRepository = studentRepository;
-        this.jdbcTemplate = jdbcTemplate;
+        this.userContextService = userContextService;
+        this.studentService = studentService;
+        this.recruiterAuthService = recruiterAuthService;
     }
 
     private String sanitizeStudentId(String studentId) {
@@ -66,7 +70,7 @@ public class ResumeController {
 
         if (principal != null) {
             String username = principal.getName();
-            var userOpt = userRepository.findByUsername(username);
+            var userOpt = userContextService.findByUsername(username);
             if (userOpt.isPresent()) {
                 var user = userOpt.get();
                 if (user.getRole() == com.placement.portal.auth.Role.ROLE_STUDENT) {
@@ -95,8 +99,10 @@ public class ResumeController {
             throw new IllegalArgumentException("Student ID must be specified or authenticated.");
         }
 
-        // Verify student existence in Oracle STUDENT table
-        if (!studentRepository.existsById(resolvedStudentId)) {
+        // Verify student existence
+        try {
+            studentService.getStudentById(resolvedStudentId);
+        } catch (Exception e) {
             throw new IllegalArgumentException("Authenticated student record not found: " + resolvedStudentId);
         }
 
@@ -171,13 +177,13 @@ public class ResumeController {
     @PreAuthorize("hasAnyRole('STUDENT', 'RECRUITER', 'ADMIN')")
     @Operation(summary = "Stream/Download resume binary BLOB")
     public ResponseEntity<byte[]> downloadResume(@PathVariable String resumeId, Principal principal) {
-        StudentResume resume = resumeService.getResumeEntity(resumeId);
+        ResumeDto resume = resumeService.getResumeById(resumeId);
         validateStudentAccess(resume.getStudentId(), principal);
 
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(resume.getContentType()))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resume.getFileName() + "\"")
-                .body(resume.getResumeData());
+                .contentType(MediaType.parseMediaType(resumeService.getResumeContentType(resumeId)))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resumeService.getResumeFileName(resumeId) + "\"")
+                .body(resumeService.getResumeBytes(resumeId));
     }
 
     @GetMapping("/student/{studentId}/current/download")
@@ -203,7 +209,7 @@ public class ResumeController {
             throw new org.springframework.security.access.AccessDeniedException("Authentication required.");
         }
 
-        var userOpt = userRepository.findByUsername(principal.getName());
+        var userOpt = userContextService.findByUsername(principal.getName());
         if (userOpt.isEmpty()) {
             throw new org.springframework.security.access.AccessDeniedException("Authenticated user not found.");
         }
@@ -221,7 +227,7 @@ public class ResumeController {
 
         ResumeDto deleted = resumeService.deleteResume(authenticatedStudentId, resumeId, isAdmin);
         return ResponseEntity.ok(ApiResponse.ok(
-                "Resume version " + deleted.getVersionNo() + " (" + deleted.getFileName() + ") permanently deleted from Oracle database.",
+                "Resume version " + deleted.getVersionNo() + " (" + deleted.getFileName() + ") permanently deleted.",
                 deleted
         ));
     }
@@ -237,7 +243,7 @@ public class ResumeController {
             throw new org.springframework.security.access.AccessDeniedException("Authentication required.");
         }
 
-        var userOpt = userRepository.findByUsername(principal.getName());
+        var userOpt = userContextService.findByUsername(principal.getName());
         if (userOpt.isEmpty()) {
             throw new org.springframework.security.access.AccessDeniedException("Authenticated user not found.");
         }
@@ -262,7 +268,7 @@ public class ResumeController {
 
     private void validateStudentAccess(String targetStudentId, Principal principal) {
         if (principal == null) return;
-        userRepository.findByUsername(principal.getName()).ifPresent(user -> {
+        userContextService.findByUsername(principal.getName()).ifPresent(user -> {
             if (user.getRole() == com.placement.portal.auth.Role.ROLE_STUDENT) {
                 String refId = user.getReferenceId();
                 if (refId == null || !refId.equalsIgnoreCase(targetStudentId)) {
@@ -271,27 +277,7 @@ public class ResumeController {
                     );
                 }
             } else if (user.getRole() == com.placement.portal.auth.Role.ROLE_RECRUITER) {
-                String recruiterCompId = user.getReferenceId() != null ? user.getReferenceId() : "";
-                Integer count = 0;
-                try {
-                    count = jdbcTemplate.queryForObject(
-                            "SELECT COUNT(*) FROM APPLICATION a " +
-                            "LEFT JOIN STUDENT_DAILY_ROUTINE_DRIVE sdr ON a.Student_Id = sdr.Student_Id AND a.Apply_Date = sdr.Apply_Date " +
-                            "JOIN PLACEMENT_DRIVE d ON (a.Drive_Id = d.Drive_Id OR sdr.Drive_Id = d.Drive_Id) " +
-                            "JOIN JOB_COMPANY jc ON d.Job_Title = jc.Job_Title " +
-                            "WHERE a.Student_Id = ? AND (" +
-                            "  UPPER(jc.Company_Id) = UPPER(?) OR " +
-                            "  EXISTS (SELECT 1 FROM RECRUITER_COMPANY rc WHERE rc.User_Id = ? AND UPPER(rc.Company_Id) = UPPER(jc.Company_Id))" +
-                            ")",
-                            Integer.class, targetStudentId, recruiterCompId, user.getUserId()
-                    );
-                } catch (Exception ignored) {}
-
-                if (count == null || count == 0) {
-                    throw new org.springframework.security.access.AccessDeniedException(
-                            "Access denied: Recruiters may only access resumes of candidates who have applied to their company's recruitment drives."
-                    );
-                }
+                recruiterAuthService.requireAuthorizedForStudent(principal, targetStudentId);
             }
         });
     }

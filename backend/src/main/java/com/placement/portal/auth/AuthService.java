@@ -12,8 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.UUID;
 
+import org.springframework.context.annotation.Profile;
+
 @Service
-public class AuthService {
+@Profile({"oracle", "h2", "default", "!neo4j"})
+public class AuthService implements IAuthService {
 
     private final UserRepository userRepository;
     private final com.placement.portal.student.StudentRepository studentRepository;

@@ -525,4 +525,48 @@ export const api = {
     });
     return handleResponse(res);
   },
+
+  // System Database Backend Info (Oracle vs Neo4j)
+  async getBackendInfo() {
+    const res = await fetch(`${BASE_URL}/system/backend-info`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(res);
+  },
+
+  // Graph Database Showcase Endpoints (Neo4j profile)
+  async getEligibleDrivesGraph(studentId) {
+    const res = await fetch(`${BASE_URL}/graph/eligible-drives/${encodeURIComponent(studentId)}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(res);
+  },
+
+  async getPlacementPathGraph(studentId) {
+    const res = await fetch(`${BASE_URL}/graph/placement-path/${encodeURIComponent(studentId)}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(res);
+  },
+
+  async getProgramPipelineGraph(programId) {
+    const res = await fetch(`${BASE_URL}/graph/program-pipeline/${encodeURIComponent(programId)}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(res);
+  },
+
+  async getRecommendationsGraph(studentId) {
+    const res = await fetch(`${BASE_URL}/graph/recommendations/${encodeURIComponent(studentId)}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(res);
+  },
+
+  async getInterviewerWorkloadGraph() {
+    const res = await fetch(`${BASE_URL}/graph/interviewer-workload`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(res);
+  },
 };

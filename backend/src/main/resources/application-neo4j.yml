@@ -1,0 +1,33 @@
+spring:
+  neo4j:
+    uri: ${NEO4J_URI:bolt://localhost:7687}
+    authentication:
+      username: ${NEO4J_USERNAME:neo4j}
+      password: ${NEO4J_PASSWORD:placement2026}
+  data:
+    neo4j:
+      database: ${NEO4J_DATABASE:neo4j}
+      repositories:
+        type: imperative
+  # Disable Flyway, JPA, and DataSource automatic execution in Neo4j profile
+  flyway:
+    enabled: false
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration
+  jpa:
+    hibernate:
+      ddl-auto: none
+
+portal:
+  resume:
+    storage-dir: ${PORTAL_RESUME_STORAGE_DIR:./data/resumes}
+
+logging:
+  level:
+    org.springframework.data.neo4j: DEBUG
+    org.springframework.data.mapping: TRACE
+    com.placement.portal: DEBUG

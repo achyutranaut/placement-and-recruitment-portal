@@ -29,7 +29,8 @@ import java.util.stream.Collectors;
 import com.placement.portal.company.JobCompany;
 
 @Service
-public class OfferService {
+@org.springframework.context.annotation.Profile({"oracle", "h2", "default", "!neo4j"})
+public class OfferService implements IOfferService {
 
     private final OfferRepository offerRepository;
     private final OfferJdbcDao offerJdbcDao;

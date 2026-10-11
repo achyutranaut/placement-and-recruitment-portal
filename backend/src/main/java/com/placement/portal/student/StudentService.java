@@ -7,7 +7,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-public class StudentService {
+@org.springframework.context.annotation.Profile({"oracle", "h2", "default", "!neo4j"})
+public class StudentService implements IStudentService {
 
     private final StudentRepository studentRepository;
 

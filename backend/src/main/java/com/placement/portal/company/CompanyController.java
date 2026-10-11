@@ -13,9 +13,9 @@ import java.util.List;
 @Tag(name = "Companies", description = "Partner companies and recruitment accounts")
 public class CompanyController {
 
-    private final CompanyService companyService;
+    private final ICompanyService companyService;
 
-    public CompanyController(CompanyService companyService) {
+    public CompanyController(ICompanyService companyService) {
         this.companyService = companyService;
     }
 

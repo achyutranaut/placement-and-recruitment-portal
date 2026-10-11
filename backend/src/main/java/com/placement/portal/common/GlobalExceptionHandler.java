@@ -84,6 +84,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
+        ex.printStackTrace();
         String msg = ex.getMessage();
         if (msg != null && (msg.contains("ORA-") || msg.contains("Daily limit reached") || msg.contains("constraint"))) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(extractCleanOracleMessage(msg)));

@@ -20,22 +20,25 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.placement.portal.auth.IUserContextService;
+import com.placement.portal.auth.PortalUserDto;
+
 @RestController
 @RequestMapping("/api/v1/applications")
 @Tag(name = "Applications", description = "Student placement drive applications and status tracking")
 public class ApplicationController {
 
-    private final ApplicationService applicationService;
-    private final UserRepository userRepository;
+    private final IApplicationService applicationService;
+    private final IUserContextService userContextService;
     private final RecruiterAuthorizationService recruiterAuthService;
 
     public ApplicationController(
-            ApplicationService applicationService,
-            UserRepository userRepository,
+            IApplicationService applicationService,
+            IUserContextService userContextService,
             RecruiterAuthorizationService recruiterAuthService
     ) {
         this.applicationService = applicationService;
-        this.userRepository = userRepository;
+        this.userContextService = userContextService;
         this.recruiterAuthService = recruiterAuthService;
     }
 
@@ -47,7 +50,7 @@ public class ApplicationController {
             Principal principal
     ) {
         if (principal != null) {
-            userRepository.findByUsername(principal.getName()).ifPresent(user -> {
+            userContextService.findByUsername(principal.getName()).ifPresent(user -> {
                 if (user.getRole() == Role.ROLE_STUDENT) {
                     if (user.getReferenceId() == null || !user.getReferenceId().equalsIgnoreCase(request.getStudentId())) {
                         throw new AccessDeniedException("Access denied: You cannot submit applications for another student.");
@@ -74,7 +77,7 @@ public class ApplicationController {
         if (principal == null) {
             throw new AccessDeniedException("Authentication required to access application pipeline");
         }
-        PortalUser user = userRepository.findByUsername(principal.getName())
+        PortalUserDto user = userContextService.findByUsername(principal.getName())
                 .orElseThrow(() -> new AccessDeniedException("Authenticated user not found"));
 
         String studentId = user.getReferenceId();
@@ -96,7 +99,7 @@ public class ApplicationController {
         List<ApplicationDto> apps = applicationService.getAllApplications();
 
         if (principal != null) {
-            var userOpt = userRepository.findByUsername(principal.getName());
+            var userOpt = userContextService.findByUsername(principal.getName());
             if (userOpt.isPresent() && userOpt.get().getRole() == Role.ROLE_RECRUITER) {
                 Set<String> authorizedDrives = recruiterAuthService.getAuthorizedDriveIds(principal);
                 apps = apps.stream()
@@ -128,7 +131,7 @@ public class ApplicationController {
     ) {
         ApplicationDto dto = applicationService.getApplicationById(id);
         if (principal != null) {
-            userRepository.findByUsername(principal.getName()).ifPresent(user -> {
+            userContextService.findByUsername(principal.getName()).ifPresent(user -> {
                 if (user.getRole() == Role.ROLE_STUDENT) {
                     if (user.getReferenceId() == null || !user.getReferenceId().equalsIgnoreCase(dto.getStudentId())) {
                         throw new AccessDeniedException("Access denied: You may only view your own application records.");
@@ -150,7 +153,7 @@ public class ApplicationController {
     ) {
         ApplicationDto dto = applicationService.getApplicationById(id);
         if (principal != null) {
-            userRepository.findByUsername(principal.getName()).ifPresent(user -> {
+            userContextService.findByUsername(principal.getName()).ifPresent(user -> {
                 if (user.getRole() == Role.ROLE_STUDENT) {
                     if (user.getReferenceId() == null || !user.getReferenceId().equalsIgnoreCase(dto.getStudentId())) {
                         throw new AccessDeniedException("Access denied: You may only view your own evaluation scores.");
@@ -171,7 +174,7 @@ public class ApplicationController {
             Principal principal
     ) {
         if (principal != null) {
-            userRepository.findByUsername(principal.getName()).ifPresent(user -> {
+            userContextService.findByUsername(principal.getName()).ifPresent(user -> {
                 if (user.getRole() == Role.ROLE_STUDENT) {
                     if (user.getReferenceId() == null || !user.getReferenceId().equalsIgnoreCase(studentId)) {
                         throw new AccessDeniedException("Access denied: Students may only access their own applications.");
@@ -190,7 +193,7 @@ public class ApplicationController {
             Principal principal
     ) {
         if (principal != null) {
-            userRepository.findByUsername(principal.getName()).ifPresent(user -> {
+            userContextService.findByUsername(principal.getName()).ifPresent(user -> {
                 if (user.getRole() == Role.ROLE_RECRUITER) {
                     recruiterAuthService.requireAuthorizedForDrive(principal, driveId);
                 }
@@ -210,7 +213,7 @@ public class ApplicationController {
         String actor = "RECRUITER";
         if (principal != null) {
             actor = principal.getName();
-            var userOpt = userRepository.findByUsername(principal.getName());
+            var userOpt = userContextService.findByUsername(principal.getName());
             if (userOpt.isPresent() && userOpt.get().getRole() == Role.ROLE_RECRUITER) {
                 recruiterAuthService.requireAuthorizedForApplication(principal, id);
             }

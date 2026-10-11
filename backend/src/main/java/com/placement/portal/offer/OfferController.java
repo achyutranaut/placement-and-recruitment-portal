@@ -22,28 +22,33 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.placement.portal.auth.IUserContextService;
+import com.placement.portal.auth.PortalUserDto;
+import com.placement.portal.student.IStudentService;
+import com.placement.portal.student.StudentDto;
+
 @RestController
 @RequestMapping("/api/v1/offers")
 @Tag(name = "Offers", description = "Official candidate employment offers and CTC packages")
 public class OfferController {
 
-    private final OfferService offerService;
+    private final IOfferService offerService;
     private final OfferLetterPdfService pdfService;
-    private final StudentRepository studentRepository;
-    private final UserRepository userRepository;
+    private final IStudentService studentService;
+    private final IUserContextService userContextService;
     private final RecruiterAuthorizationService recruiterAuthService;
 
     public OfferController(
-            OfferService offerService,
+            IOfferService offerService,
             OfferLetterPdfService pdfService,
-            StudentRepository studentRepository,
-            UserRepository userRepository,
+            IStudentService studentService,
+            IUserContextService userContextService,
             RecruiterAuthorizationService recruiterAuthService
     ) {
         this.offerService = offerService;
         this.pdfService = pdfService;
-        this.studentRepository = studentRepository;
-        this.userRepository = userRepository;
+        this.studentService = studentService;
+        this.userContextService = userContextService;
         this.recruiterAuthService = recruiterAuthService;
     }
 
@@ -66,7 +71,7 @@ public class OfferController {
         List<OfferDto> offers = offerService.getAllOffers();
 
         if (principal != null) {
-            var userOpt = userRepository.findByUsername(principal.getName());
+            var userOpt = userContextService.findByUsername(principal.getName());
             if (userOpt.isPresent() && userOpt.get().getRole() == Role.ROLE_RECRUITER) {
                 Set<String> authorizedDrives = recruiterAuthService.getAuthorizedDriveIds(principal);
                 offers = offers.stream()
@@ -150,7 +155,10 @@ public class OfferController {
 
         validateOfferAccess(offer, principal);
 
-        Student student = studentRepository.findById(offer.getStudentId()).orElse(null);
+        StudentDto student = null;
+        try {
+            student = studentService.getStudentById(offer.getStudentId());
+        } catch (Exception ignored) {}
         byte[] pdfBytes = pdfService.generateOfferLetterPdf(offer, student);
 
         String filename = "Offer_Letter_" + offer.getOfferId() + ".pdf";
@@ -162,7 +170,7 @@ public class OfferController {
 
     private void validateOfferAccess(OfferDto offer, Principal principal) {
         if (principal == null) return;
-        userRepository.findByUsername(principal.getName()).ifPresent(user -> {
+        userContextService.findByUsername(principal.getName()).ifPresent(user -> {
             if (user.getRole() == Role.ROLE_STUDENT) {
                 String refId = user.getReferenceId();
                 if (refId == null || !refId.equalsIgnoreCase(offer.getStudentId())) {
@@ -178,7 +186,7 @@ public class OfferController {
 
     private void validateStudentAccess(String studentId, Principal principal) {
         if (principal == null) return;
-        userRepository.findByUsername(principal.getName()).ifPresent(user -> {
+        userContextService.findByUsername(principal.getName()).ifPresent(user -> {
             if (user.getRole() == Role.ROLE_STUDENT) {
                 String refId = user.getReferenceId();
                 if (refId == null || !refId.equalsIgnoreCase(studentId)) {
@@ -196,8 +204,8 @@ public class OfferController {
         if (principal == null) {
             throw new AccessDeniedException("Authentication required");
         }
-        return userRepository.findByUsername(principal.getName())
-                .map(com.placement.portal.auth.PortalUser::getReferenceId)
+        return userContextService.findByUsername(principal.getName())
+                .map(PortalUserDto::getReferenceId)
                 .orElseThrow(() -> new AccessDeniedException("Student profile not found for authenticated user"));
     }
 }

@@ -17,22 +17,25 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.placement.portal.auth.IUserContextService;
+import com.placement.portal.auth.PortalUserDto;
+
 @RestController
 @RequestMapping("/api/v1/students")
 @Tag(name = "Students", description = "Student profile management and academic records")
 public class StudentController {
 
-    private final StudentService studentService;
-    private final UserRepository userRepository;
+    private final IStudentService studentService;
+    private final IUserContextService userContextService;
     private final com.placement.portal.company.RecruiterAuthorizationService recruiterAuthService;
 
     public StudentController(
-            StudentService studentService,
-            UserRepository userRepository,
+            IStudentService studentService,
+            IUserContextService userContextService,
             com.placement.portal.company.RecruiterAuthorizationService recruiterAuthService
     ) {
         this.studentService = studentService;
-        this.userRepository = userRepository;
+        this.userContextService = userContextService;
         this.recruiterAuthService = recruiterAuthService;
     }
 
@@ -47,7 +50,7 @@ public class StudentController {
         List<StudentDto> all = studentService.getAllStudents();
 
         if (principal != null) {
-            var userOpt = userRepository.findByUsername(principal.getName());
+            var userOpt = userContextService.findByUsername(principal.getName());
             if (userOpt.isPresent() && userOpt.get().getRole() == Role.ROLE_RECRUITER) {
                 all = all.stream()
                         .filter(s -> recruiterAuthService.isAuthorizedForStudent(principal, s.getStudentId()))
@@ -92,7 +95,7 @@ public class StudentController {
     @Operation(summary = "Get student profile by ID")
     public ResponseEntity<ApiResponse<StudentDto>> getStudentById(@PathVariable String id, Principal principal) {
         if (principal != null) {
-            PortalUser user = userRepository.findByUsername(principal.getName())
+            PortalUserDto user = userContextService.findByUsername(principal.getName())
                     .orElseThrow(() -> new AccessDeniedException("Authenticated user not found"));
             if (user.getRole() == Role.ROLE_STUDENT) {
                 String refId = user.getReferenceId();
@@ -122,7 +125,7 @@ public class StudentController {
             Principal principal
     ) {
         if (principal != null) {
-            PortalUser user = userRepository.findByUsername(principal.getName())
+            PortalUserDto user = userContextService.findByUsername(principal.getName())
                     .orElseThrow(() -> new AccessDeniedException("User not found"));
             if (user.getRole() == Role.ROLE_STUDENT) {
                 String refId = user.getReferenceId();
@@ -150,8 +153,8 @@ public class StudentController {
         if (principal == null) {
             throw new AccessDeniedException("Authentication required");
         }
-        return userRepository.findByUsername(principal.getName())
-                .map(PortalUser::getReferenceId)
+        return userContextService.findByUsername(principal.getName())
+                .map(PortalUserDto::getReferenceId)
                 .orElseThrow(() -> new AccessDeniedException("Student profile not found for authenticated user"));
     }
 }

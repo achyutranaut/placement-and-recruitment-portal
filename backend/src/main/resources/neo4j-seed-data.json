@@ -1,0 +1,2396 @@
+{
+  "programs": [
+    {
+      "id": "PROG01",
+      "name": "Full Stack Java Enterprise Systems",
+      "fee": 15000.0,
+      "duration": "3 Months",
+      "level": "Bachelor's",
+      "dept": "Engineering",
+      "spec": "",
+      "pattern": "",
+      "example": "",
+      "active": "Y"
+    },
+    {
+      "id": "PROG02",
+      "name": "Applied Artificial Intelligence & Deep Learning",
+      "fee": 22000.0,
+      "duration": "4 Months",
+      "level": "Bachelor's",
+      "dept": "Engineering",
+      "spec": "",
+      "pattern": "",
+      "example": "",
+      "active": "Y"
+    },
+    {
+      "id": "PROG03",
+      "name": "Cloud Native DevOps & Kubernetes",
+      "fee": 18000.0,
+      "duration": "3 Months",
+      "level": "Bachelor's",
+      "dept": "Engineering",
+      "spec": "",
+      "pattern": "",
+      "example": "",
+      "active": "Y"
+    },
+    {
+      "id": "PROG04",
+      "name": "Algorithmic Problem Solving & Competitive Coding",
+      "fee": 10000.0,
+      "duration": "2 Months",
+      "level": "Bachelor's",
+      "dept": "Engineering",
+      "spec": "",
+      "pattern": "",
+      "example": "",
+      "active": "Y"
+    },
+    {
+      "id": "PROG05",
+      "name": "Cybersecurity Operations & Threat Hunting",
+      "fee": 20000.0,
+      "duration": "4 Months",
+      "level": "Bachelor's",
+      "dept": "Engineering",
+      "spec": "",
+      "pattern": "",
+      "example": "",
+      "active": "Y"
+    },
+    {
+      "id": "BCE",
+      "name": "Computer Science & Engineering",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Legacy",
+      "dept": "Engineering",
+      "spec": "",
+      "pattern": "",
+      "example": "",
+      "active": "N"
+    },
+    {
+      "id": "BCT",
+      "name": "Information Technology",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Legacy",
+      "dept": "Engineering",
+      "spec": "",
+      "pattern": "",
+      "example": "",
+      "active": "N"
+    },
+    {
+      "id": "BEC",
+      "name": "Electronics & Communication",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Legacy",
+      "dept": "Engineering",
+      "spec": "",
+      "pattern": "",
+      "example": "",
+      "active": "N"
+    },
+    {
+      "id": "BME",
+      "name": "Mechanical Engineering",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Legacy",
+      "dept": "Engineering",
+      "spec": "",
+      "pattern": "",
+      "example": "",
+      "active": "N"
+    },
+    {
+      "id": "BDS",
+      "name": "Data Science",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Legacy",
+      "dept": "Engineering",
+      "spec": "",
+      "pattern": "",
+      "example": "",
+      "active": "N"
+    },
+    {
+      "id": "BEE",
+      "name": "Electrical & Electronics Engineering",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Legacy",
+      "dept": "Engineering",
+      "spec": "",
+      "pattern": "",
+      "example": "",
+      "active": "N"
+    },
+    {
+      "id": "BCV",
+      "name": "Civil Engineering",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Legacy",
+      "dept": "Engineering",
+      "spec": "",
+      "pattern": "",
+      "example": "",
+      "active": "N"
+    },
+    {
+      "id": "BTECH-CSE",
+      "name": "B.Tech CSE",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Computer Science",
+      "spec": "",
+      "pattern": "^2[0-9]BCE[0-9]{4}$",
+      "example": "21BCE1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-CSE-AIML",
+      "name": "B.Tech CSE (AI & ML)",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Computer Science",
+      "spec": "AI & ML",
+      "pattern": "^2[0-9]BCE[0-9]{4}$",
+      "example": "21BCE1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-CSE-AIDA",
+      "name": "B.Tech CSE (AI & Data Analytics)",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Computer Science",
+      "spec": "AI & Data Analytics",
+      "pattern": "^2[0-9]BCE[0-9]{4}$",
+      "example": "21BCE1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-CSE-BLOCK",
+      "name": "B.Tech CSE (Blockchain)",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Computer Science",
+      "spec": "Blockchain",
+      "pattern": "^2[0-9]BCE[0-9]{4}$",
+      "example": "21BCE1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-CSE-CYBER",
+      "name": "B.Tech CSE (Cyber Security)",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Computer Science",
+      "spec": "Cyber Security",
+      "pattern": "^2[0-9]BCE[0-9]{4}$",
+      "example": "21BCE1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-CSE-DS",
+      "name": "B.Tech CSE (Data Science)",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Computer Science",
+      "spec": "Data Science",
+      "pattern": "^2[0-9]BCE[0-9]{4}$",
+      "example": "21BCE1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-CSE-GAMING",
+      "name": "B.Tech CSE (Gaming Tech)",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Computer Science",
+      "spec": "Gaming Tech",
+      "pattern": "^2[0-9]BCE[0-9]{4}$",
+      "example": "21BCE1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-CSE-IOT",
+      "name": "B.Tech CSE (IoT)",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Computer Science",
+      "spec": "IoT",
+      "pattern": "^2[0-9]BCE[0-9]{4}$",
+      "example": "21BCE1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-CSE-SWE",
+      "name": "B.Tech CSE (Software Engineering)",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Computer Science",
+      "spec": "Software Engineering",
+      "pattern": "^2[0-9]BCE[0-9]{4}$",
+      "example": "21BCE1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-ECE",
+      "name": "B.Tech ECE",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Electronics",
+      "spec": "",
+      "pattern": "^2[0-9]BEC[0-9]{4}$",
+      "example": "21BEC1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-ECE-AICYBER",
+      "name": "B.Tech ECE (AI & Cybernetics)",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Electronics",
+      "spec": "AI & Cybernetics",
+      "pattern": "^2[0-9]BEC[0-9]{4}$",
+      "example": "21BEC1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-ECE-EMBED",
+      "name": "B.Tech ECE (Embedded Systems)",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Electronics",
+      "spec": "Embedded Systems",
+      "pattern": "^2[0-9]BEC[0-9]{4}$",
+      "example": "21BEC1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-ECE-VLSI",
+      "name": "B.Tech ECE (VLSI)",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Electronics",
+      "spec": "VLSI",
+      "pattern": "^2[0-9]BEC[0-9]{4}$",
+      "example": "21BEC1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-ECE-BIOMED",
+      "name": "B.Tech ECE (Biomedical)",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Electronics",
+      "spec": "Biomedical",
+      "pattern": "^2[0-9]BEC[0-9]{4}$",
+      "example": "21BEC1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-EEE",
+      "name": "B.Tech EEE",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Electrical",
+      "spec": "",
+      "pattern": "^2[0-9]BEE[0-9]{4}$",
+      "example": "21BEE1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-ELE-COMP",
+      "name": "B.Tech Electronics & Computer Engineering",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Electronics",
+      "spec": "Computer Engineering",
+      "pattern": "^2[0-9]BEC[0-9]{4}$",
+      "example": "21BEC1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-ELE-INST",
+      "name": "B.Tech Electronics & Instrumentation",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Electronics",
+      "spec": "Instrumentation",
+      "pattern": "^2[0-9]BEI[0-9]{4}$",
+      "example": "21BEI1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-MECH",
+      "name": "B.Tech Mechanical",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Mechanical",
+      "spec": "",
+      "pattern": "^2[0-9]BME[0-9]{4}$",
+      "example": "21BME1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-MECH-AUTO",
+      "name": "B.Tech Mechanical (Automotive)",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Mechanical",
+      "spec": "Automotive",
+      "pattern": "^2[0-9]BME[0-9]{4}$",
+      "example": "21BME1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-MECH-EV",
+      "name": "B.Tech Mechanical (EV)",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Mechanical",
+      "spec": "EV",
+      "pattern": "^2[0-9]BME[0-9]{4}$",
+      "example": "21BME1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-MECH-MFG",
+      "name": "B.Tech Mechanical (Manufacturing)",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Mechanical",
+      "spec": "Manufacturing",
+      "pattern": "^2[0-9]BME[0-9]{4}$",
+      "example": "21BME1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-MECH-ROBOT",
+      "name": "B.Tech Mechanical (Robotics)",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Mechanical",
+      "spec": "Robotics",
+      "pattern": "^2[0-9]BME[0-9]{4}$",
+      "example": "21BME1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-CIVIL",
+      "name": "B.Tech Civil",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Civil",
+      "spec": "",
+      "pattern": "^2[0-9]BCV[0-9]{4}$",
+      "example": "21BCV1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-CIVIL-LT",
+      "name": "B.Tech Civil (L&T Collaboration)",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Civil",
+      "spec": "L&T Collaboration",
+      "pattern": "^2[0-9]BCV[0-9]{4}$",
+      "example": "21BCV1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-CHEM",
+      "name": "B.Tech Chemical",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Chemical",
+      "spec": "",
+      "pattern": "^2[0-9]BCH[0-9]{4}$",
+      "example": "21BCH1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-BIOTECH",
+      "name": "B.Tech Biotechnology",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Biotechnology",
+      "spec": "",
+      "pattern": "^2[0-9]BBT[0-9]{4}$",
+      "example": "21BBT1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-AERO",
+      "name": "B.Tech Aerospace",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Aerospace",
+      "spec": "",
+      "pattern": "^2[0-9]BAE[0-9]{4}$",
+      "example": "21BAE1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-BIOENG",
+      "name": "B.Tech Bioengineering",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Bioengineering",
+      "spec": "",
+      "pattern": "^2[0-9]BBI[0-9]{4}$",
+      "example": "21BBI1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-IT",
+      "name": "B.Tech IT",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Information Technology",
+      "spec": "",
+      "pattern": "^2[0-9]BCT[0-9]{4}$",
+      "example": "21BCT1234",
+      "active": "Y"
+    },
+    {
+      "id": "BTECH-FASHION",
+      "name": "B.Tech Fashion Technology",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Design",
+      "spec": "Fashion Technology",
+      "pattern": "^2[0-9]BFT[0-9]{4}$",
+      "example": "21BFT1234",
+      "active": "Y"
+    },
+    {
+      "id": "BARCH",
+      "name": "B.Arch",
+      "fee": 0.0,
+      "duration": "5 Years",
+      "level": "Bachelor's",
+      "dept": "Architecture",
+      "spec": "",
+      "pattern": "^2[0-9]BAR[0-9]{4}$",
+      "example": "21BAR1001",
+      "active": "Y"
+    },
+    {
+      "id": "BDES-PROD",
+      "name": "B.Des Industrial/Product Design",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Design",
+      "spec": "Industrial/Product Design",
+      "pattern": "^2[0-9]BDS[0-9]{4}$",
+      "example": "21BDS1001",
+      "active": "Y"
+    },
+    {
+      "id": "BSC-CS",
+      "name": "B.Sc Computer Science",
+      "fee": 0.0,
+      "duration": "3 Years",
+      "level": "Bachelor's",
+      "dept": "Computer Science",
+      "spec": "",
+      "pattern": "^2[0-9]BSC[0-9]{4}$",
+      "example": "21BSC1001",
+      "active": "Y"
+    },
+    {
+      "id": "BSC-ECON",
+      "name": "B.Sc Economics (Hons.)",
+      "fee": 0.0,
+      "duration": "3 Years",
+      "level": "Bachelor's",
+      "dept": "Science",
+      "spec": "Economics",
+      "pattern": "^2[0-9]BSC[0-9]{4}$",
+      "example": "21BSC1001",
+      "active": "Y"
+    },
+    {
+      "id": "BSC-FASHION",
+      "name": "B.Sc Fashion Design",
+      "fee": 0.0,
+      "duration": "3 Years",
+      "level": "Bachelor's",
+      "dept": "Design",
+      "spec": "Fashion Design",
+      "pattern": "^2[0-9]BSC[0-9]{4}$",
+      "example": "21BSC1001",
+      "active": "Y"
+    },
+    {
+      "id": "BSC-HOSP",
+      "name": "B.Sc Hospitality & Hotel Administration",
+      "fee": 0.0,
+      "duration": "3 Years",
+      "level": "Bachelor's",
+      "dept": "Management",
+      "spec": "Hospitality & Hotel Administration",
+      "pattern": "^2[0-9]BSC[0-9]{4}$",
+      "example": "21BSC1001",
+      "active": "Y"
+    },
+    {
+      "id": "BSC-ANIM",
+      "name": "B.Sc Multimedia & Animation",
+      "fee": 0.0,
+      "duration": "3 Years",
+      "level": "Bachelor's",
+      "dept": "Design",
+      "spec": "Multimedia & Animation",
+      "pattern": "^2[0-9]BSC[0-9]{4}$",
+      "example": "21BSC1001",
+      "active": "Y"
+    },
+    {
+      "id": "BSC-VISCOM",
+      "name": "B.Sc Visual Communication",
+      "fee": 0.0,
+      "duration": "3 Years",
+      "level": "Bachelor's",
+      "dept": "Design",
+      "spec": "Visual Communication",
+      "pattern": "^2[0-9]BSC[0-9]{4}$",
+      "example": "21BSC1001",
+      "active": "Y"
+    },
+    {
+      "id": "BSC-AGRI",
+      "name": "B.Sc Agriculture (Hons.)",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Bachelor's",
+      "dept": "Science",
+      "spec": "Agriculture",
+      "pattern": "^2[0-9]BAG[0-9]{4}$",
+      "example": "21BAG1001",
+      "active": "Y"
+    },
+    {
+      "id": "BBA",
+      "name": "BBA",
+      "fee": 0.0,
+      "duration": "3 Years",
+      "level": "Bachelor's",
+      "dept": "Management",
+      "spec": "",
+      "pattern": "^2[0-9]BBA[0-9]{4}$",
+      "example": "21BBA1001",
+      "active": "Y"
+    },
+    {
+      "id": "BBA-HONS",
+      "name": "BBA (Hons.)",
+      "fee": 0.0,
+      "duration": "3 Years",
+      "level": "Bachelor's",
+      "dept": "Management",
+      "spec": "Honours",
+      "pattern": "^2[0-9]BBA[0-9]{4}$",
+      "example": "21BBA1001",
+      "active": "Y"
+    },
+    {
+      "id": "BBA-DIGITAL",
+      "name": "BBA Digital Business",
+      "fee": 0.0,
+      "duration": "3 Years",
+      "level": "Bachelor's",
+      "dept": "Management",
+      "spec": "Digital Business",
+      "pattern": "^2[0-9]BBA[0-9]{4}$",
+      "example": "21BBA1001",
+      "active": "Y"
+    },
+    {
+      "id": "BCOM",
+      "name": "B.Com",
+      "fee": 0.0,
+      "duration": "3 Years",
+      "level": "Bachelor's",
+      "dept": "Commerce",
+      "spec": "",
+      "pattern": "^2[0-9]BCM[0-9]{4}$",
+      "example": "21BCM1001",
+      "active": "Y"
+    },
+    {
+      "id": "BCOM-HONS",
+      "name": "B.Com (Hons.)",
+      "fee": 0.0,
+      "duration": "3 Years",
+      "level": "Bachelor's",
+      "dept": "Commerce",
+      "spec": "Honours",
+      "pattern": "^2[0-9]BCM[0-9]{4}$",
+      "example": "21BCM1001",
+      "active": "Y"
+    },
+    {
+      "id": "BCA",
+      "name": "BCA",
+      "fee": 0.0,
+      "duration": "3 Years",
+      "level": "Bachelor's",
+      "dept": "Computer Science",
+      "spec": "",
+      "pattern": "^2[0-9]BCA[0-9]{4}$",
+      "example": "21BCA1001",
+      "active": "Y"
+    },
+    {
+      "id": "BALLB-HONS",
+      "name": "BA LLB (Hons.)",
+      "fee": 0.0,
+      "duration": "5 Years",
+      "level": "Bachelor's",
+      "dept": "Law",
+      "spec": "Honours",
+      "pattern": "^2[0-9]BLW[0-9]{4}$",
+      "example": "21BLW1001",
+      "active": "Y"
+    },
+    {
+      "id": "BBALLB-HONS",
+      "name": "BBA LLB (Hons.)",
+      "fee": 0.0,
+      "duration": "5 Years",
+      "level": "Bachelor's",
+      "dept": "Law",
+      "spec": "Honours",
+      "pattern": "^2[0-9]BLW[0-9]{4}$",
+      "example": "21BLW1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-CSE",
+      "name": "M.Tech CSE",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Computer Science",
+      "spec": "",
+      "pattern": "^2[0-9]MCS[0-9]{4}$",
+      "example": "24MCS1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-CSE-BIGDATA",
+      "name": "M.Tech CSE (Big Data)",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Computer Science",
+      "spec": "Big Data",
+      "pattern": "^2[0-9]MCS[0-9]{4}$",
+      "example": "24MCS1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-CSE-CYBER",
+      "name": "M.Tech CSE (Cybersecurity)",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Computer Science",
+      "spec": "Cybersecurity",
+      "pattern": "^2[0-9]MCS[0-9]{4}$",
+      "example": "24MCS1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-CSE-INFOSEC",
+      "name": "M.Tech CSE (Information Security)",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Computer Science",
+      "spec": "Information Security",
+      "pattern": "^2[0-9]MCS[0-9]{4}$",
+      "example": "24MCS1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-ECE-COMM",
+      "name": "M.Tech ECE (Communication)",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Electronics",
+      "spec": "Communication",
+      "pattern": "^2[0-9]MEC[0-9]{4}$",
+      "example": "24MEC1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-ECE-VLSI",
+      "name": "M.Tech ECE (VLSI Design)",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Electronics",
+      "spec": "VLSI Design",
+      "pattern": "^2[0-9]MEC[0-9]{4}$",
+      "example": "24MEC1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-EEE-PED",
+      "name": "M.Tech EEE (Power Electronics & Drives)",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Electrical",
+      "spec": "Power Electronics & Drives",
+      "pattern": "^2[0-9]MEE[0-9]{4}$",
+      "example": "24MEE1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-EEE-CA",
+      "name": "M.Tech EEE (Control & Automation)",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Electrical",
+      "spec": "Control & Automation",
+      "pattern": "^2[0-9]MEE[0-9]{4}$",
+      "example": "24MEE1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-MECH-CADCAM",
+      "name": "M.Tech Mechanical (CAD/CAM)",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Mechanical",
+      "spec": "CAD/CAM",
+      "pattern": "^2[0-9]MME[0-9]{4}$",
+      "example": "24MME1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-MECH-MFG",
+      "name": "M.Tech Mechanical (Manufacturing)",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Mechanical",
+      "spec": "Manufacturing",
+      "pattern": "^2[0-9]MME[0-9]{4}$",
+      "example": "24MME1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-MECH-MECH",
+      "name": "M.Tech Mechanical (Mechatronics)",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Mechanical",
+      "spec": "Mechatronics",
+      "pattern": "^2[0-9]MME[0-9]{4}$",
+      "example": "24MME1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-MECH-AUTO",
+      "name": "M.Tech Mechanical (Automotive Engineering)",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Mechanical",
+      "spec": "Automotive Engineering",
+      "pattern": "^2[0-9]MME[0-9]{4}$",
+      "example": "24MME1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-MECH-AUTOE",
+      "name": "M.Tech Mechanical (Automotive Electronics)",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Mechanical",
+      "spec": "Automotive Electronics",
+      "pattern": "^2[0-9]MME[0-9]{4}$",
+      "example": "24MME1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-CIVIL-CTM",
+      "name": "M.Tech Civil (Construction Technology & Management)",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Civil",
+      "spec": "Construction Technology & Management",
+      "pattern": "^2[0-9]MCV[0-9]{4}$",
+      "example": "24MCV1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-CIVIL-STRUCT",
+      "name": "M.Tech Civil (Structural)",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Civil",
+      "spec": "Structural",
+      "pattern": "^2[0-9]MCV[0-9]{4}$",
+      "example": "24MCV1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-BIOMED",
+      "name": "M.Tech Biomedical",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Bioengineering",
+      "spec": "Biomedical",
+      "pattern": "^2[0-9]MBM[0-9]{4}$",
+      "example": "24MBM1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-BIOTECH",
+      "name": "M.Tech Biotechnology",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Biotechnology",
+      "spec": "",
+      "pattern": "^2[0-9]MBT[0-9]{4}$",
+      "example": "24MBT1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-CLOUD",
+      "name": "M.Tech Cloud Computing",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Computer Science",
+      "spec": "Cloud Computing",
+      "pattern": "^2[0-9]MCS[0-9]{4}$",
+      "example": "24MCS1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-SWE",
+      "name": "M.Tech Software Engineering",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Computer Science",
+      "spec": "Software Engineering",
+      "pattern": "^2[0-9]MCS[0-9]{4}$",
+      "example": "24MCS1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-EMBED",
+      "name": "M.Tech Embedded Systems",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Electronics",
+      "spec": "Embedded Systems",
+      "pattern": "^2[0-9]MEC[0-9]{4}$",
+      "example": "24MEC1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-NANO",
+      "name": "M.Tech Nanotechnology",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Science",
+      "spec": "Nanotechnology",
+      "pattern": "^2[0-9]MNT[0-9]{4}$",
+      "example": "24MNT1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-ENV",
+      "name": "M.Tech Energy & Environmental Engineering",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Civil",
+      "spec": "Energy & Environmental Engineering",
+      "pattern": "^2[0-9]MEE[0-9]{4}$",
+      "example": "24MEE1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-IND-AUTO",
+      "name": "M.Tech Industrial Automation",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Mechanical",
+      "spec": "Industrial Automation",
+      "pattern": "^2[0-9]MME[0-9]{4}$",
+      "example": "24MME1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-IND-IOT",
+      "name": "M.Tech Industrial IoT",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Computer Science",
+      "spec": "Industrial IoT",
+      "pattern": "^2[0-9]MCS[0-9]{4}$",
+      "example": "24MCS1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-IOT-SENSOR",
+      "name": "M.Tech IoT & Sensor Systems",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Electronics",
+      "spec": "IoT & Sensor Systems",
+      "pattern": "^2[0-9]MEC[0-9]{4}$",
+      "example": "24MEC1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-APPLIED-CFD",
+      "name": "M.Tech Applied CFD",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Mechanical",
+      "spec": "Applied CFD",
+      "pattern": "^2[0-9]MME[0-9]{4}$",
+      "example": "24MME1001",
+      "active": "Y"
+    },
+    {
+      "id": "MTECH-SMART-MOB",
+      "name": "M.Tech Smart Mobility",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Mechanical",
+      "spec": "Smart Mobility",
+      "pattern": "^2[0-9]MME[0-9]{4}$",
+      "example": "24MME1001",
+      "active": "Y"
+    },
+    {
+      "id": "MBA",
+      "name": "MBA",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Management",
+      "spec": "",
+      "pattern": "^2[0-9]MBA[0-9]{4}$",
+      "example": "24MBA1001",
+      "active": "Y"
+    },
+    {
+      "id": "MCA",
+      "name": "MCA",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Computer Science",
+      "spec": "",
+      "pattern": "^2[0-9]MCA[0-9]{4}$",
+      "example": "24MCA1001",
+      "active": "Y"
+    },
+    {
+      "id": "MSC-BIOTECH",
+      "name": "M.Sc Biotechnology",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Biotechnology",
+      "spec": "",
+      "pattern": "^2[0-9]MSB[0-9]{4}$",
+      "example": "24MSB1001",
+      "active": "Y"
+    },
+    {
+      "id": "MSC-DATA-SCI",
+      "name": "M.Sc Data Science",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Computer Science",
+      "spec": "Data Science",
+      "pattern": "^2[0-9]MSD[0-9]{4}$",
+      "example": "24MSD1001",
+      "active": "Y"
+    },
+    {
+      "id": "MSC-CHEM",
+      "name": "M.Sc Chemistry",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Science",
+      "spec": "Chemistry",
+      "pattern": "^2[0-9]MSC[0-9]{4}$",
+      "example": "24MSC1001",
+      "active": "Y"
+    },
+    {
+      "id": "MSC-PHYS",
+      "name": "M.Sc Physics",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Science",
+      "spec": "Physics",
+      "pattern": "^2[0-9]MSP[0-9]{4}$",
+      "example": "24MSP1001",
+      "active": "Y"
+    },
+    {
+      "id": "MSC-APPL-MICRO",
+      "name": "M.Sc Applied Microbiology",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Science",
+      "spec": "Applied Microbiology",
+      "pattern": "^2[0-9]MSM[0-9]{4}$",
+      "example": "24MSM1001",
+      "active": "Y"
+    },
+    {
+      "id": "MSC-BUS-STAT",
+      "name": "M.Sc Business Statistics",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Management",
+      "spec": "Business Statistics",
+      "pattern": "^2[0-9]MSB[0-9]{4}$",
+      "example": "24MSB1001",
+      "active": "Y"
+    },
+    {
+      "id": "MSC-APPL-PSYCH",
+      "name": "M.Sc Applied Psychology",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Science",
+      "spec": "Applied Psychology",
+      "pattern": "^2[0-9]MSY[0-9]{4}$",
+      "example": "24MSY1001",
+      "active": "Y"
+    },
+    {
+      "id": "MDES-IND-DES",
+      "name": "M.Des Industrial Design",
+      "fee": 0.0,
+      "duration": "2 Years",
+      "level": "Master's",
+      "dept": "Design",
+      "spec": "Industrial Design",
+      "pattern": "^2[0-9]MDS[0-9]{4}$",
+      "example": "24MDS1001",
+      "active": "Y"
+    },
+    {
+      "id": "LLM-CORP-LAW",
+      "name": "LLM Corporate Law",
+      "fee": 0.0,
+      "duration": "1 Year",
+      "level": "Master's",
+      "dept": "Law",
+      "spec": "Corporate Law",
+      "pattern": "^2[0-9]LLM[0-9]{4}$",
+      "example": "24LLM1001",
+      "active": "Y"
+    },
+    {
+      "id": "LLM-IP-LAW",
+      "name": "LLM Intellectual Property Law",
+      "fee": 0.0,
+      "duration": "1 Year",
+      "level": "Master's",
+      "dept": "Law",
+      "spec": "Intellectual Property Law",
+      "pattern": "^2[0-9]LLM[0-9]{4}$",
+      "example": "24LLM1001",
+      "active": "Y"
+    },
+    {
+      "id": "LLM-INT-LAW",
+      "name": "LLM International Law & Development",
+      "fee": 0.0,
+      "duration": "1 Year",
+      "level": "Master's",
+      "dept": "Law",
+      "spec": "International Law & Development",
+      "pattern": "^2[0-9]LLM[0-9]{4}$",
+      "example": "24LLM1001",
+      "active": "Y"
+    },
+    {
+      "id": "INT-MTECH-CSE",
+      "name": "Integrated M.Tech CSE",
+      "fee": 0.0,
+      "duration": "5 Years",
+      "level": "Integrated",
+      "dept": "Computer Science",
+      "spec": "",
+      "pattern": "^2[0-9]MIS[0-9]{4}$",
+      "example": "21MIS1001",
+      "active": "Y"
+    },
+    {
+      "id": "INT-MTECH-CSE-DS",
+      "name": "Integrated M.Tech CSE (Data Science)",
+      "fee": 0.0,
+      "duration": "5 Years",
+      "level": "Integrated",
+      "dept": "Computer Science",
+      "spec": "Data Science",
+      "pattern": "^2[0-9]MIS[0-9]{4}$",
+      "example": "21MIS1001",
+      "active": "Y"
+    },
+    {
+      "id": "INT-MTECH-BIOTECH",
+      "name": "Integrated M.Tech Biotechnology",
+      "fee": 0.0,
+      "duration": "5 Years",
+      "level": "Integrated",
+      "dept": "Biotechnology",
+      "spec": "",
+      "pattern": "^2[0-9]MIB[0-9]{4}$",
+      "example": "21MIB1001",
+      "active": "Y"
+    },
+    {
+      "id": "INT-MTECH-CDS",
+      "name": "Integrated M.Tech Computational & Data Science",
+      "fee": 0.0,
+      "duration": "5 Years",
+      "level": "Integrated",
+      "dept": "Computer Science",
+      "spec": "Computational & Data Science",
+      "pattern": "^2[0-9]MIS[0-9]{4}$",
+      "example": "21MIS1001",
+      "active": "Y"
+    },
+    {
+      "id": "INT-MTECH-CTM",
+      "name": "Integrated M.Tech Construction Technology & Management",
+      "fee": 0.0,
+      "duration": "5 Years",
+      "level": "Integrated",
+      "dept": "Civil",
+      "spec": "Construction Technology & Management",
+      "pattern": "^2[0-9]MIC[0-9]{4}$",
+      "example": "21MIC1001",
+      "active": "Y"
+    },
+    {
+      "id": "INT-MTECH-MECH",
+      "name": "Integrated M.Tech Mechanical",
+      "fee": 0.0,
+      "duration": "5 Years",
+      "level": "Integrated",
+      "dept": "Mechanical",
+      "spec": "",
+      "pattern": "^2[0-9]MIM[0-9]{4}$",
+      "example": "21MIM1001",
+      "active": "Y"
+    },
+    {
+      "id": "INT-MTECH-SWE",
+      "name": "Integrated M.Tech Software Engineering",
+      "fee": 0.0,
+      "duration": "5 Years",
+      "level": "Integrated",
+      "dept": "Computer Science",
+      "spec": "Software Engineering",
+      "pattern": "^2[0-9]MIS[0-9]{4}$",
+      "example": "21MIS1001",
+      "active": "Y"
+    },
+    {
+      "id": "INT-MTECH-AI",
+      "name": "Integrated M.Tech AI",
+      "fee": 0.0,
+      "duration": "5 Years",
+      "level": "Integrated",
+      "dept": "Computer Science",
+      "spec": "AI",
+      "pattern": "^2[0-9]MIS[0-9]{4}$",
+      "example": "21MIS1001",
+      "active": "Y"
+    },
+    {
+      "id": "INT-MTECH-AI-BIO",
+      "name": "Integrated M.Tech AI & Bioinformatics",
+      "fee": 0.0,
+      "duration": "5 Years",
+      "level": "Integrated",
+      "dept": "Computer Science",
+      "spec": "AI & Bioinformatics",
+      "pattern": "^2[0-9]MIS[0-9]{4}$",
+      "example": "21MIS1001",
+      "active": "Y"
+    },
+    {
+      "id": "INT-MTECH-CSE-SEC",
+      "name": "Integrated M.Tech CSE (Cyber Security)",
+      "fee": 0.0,
+      "duration": "5 Years",
+      "level": "Integrated",
+      "dept": "Computer Science",
+      "spec": "Cyber Security",
+      "pattern": "^2[0-9]MIS[0-9]{4}$",
+      "example": "21MIS1001",
+      "active": "Y"
+    },
+    {
+      "id": "INT-MSC-BIOTECH",
+      "name": "Integrated M.Sc Biotechnology",
+      "fee": 0.0,
+      "duration": "5 Years",
+      "level": "Integrated",
+      "dept": "Biotechnology",
+      "spec": "",
+      "pattern": "^2[0-9]IMS[0-9]{4}$",
+      "example": "21IMS1001",
+      "active": "Y"
+    },
+    {
+      "id": "INT-MSC-CSDA",
+      "name": "Integrated M.Sc Computational Statistics & Data Analytics",
+      "fee": 0.0,
+      "duration": "5 Years",
+      "level": "Integrated",
+      "dept": "Computer Science",
+      "spec": "Computational Statistics & Data Analytics",
+      "pattern": "^2[0-9]IMS[0-9]{4}$",
+      "example": "21IMS1001",
+      "active": "Y"
+    },
+    {
+      "id": "INT-MSC-PHYS",
+      "name": "Integrated M.Sc Physics",
+      "fee": 0.0,
+      "duration": "5 Years",
+      "level": "Integrated",
+      "dept": "Science",
+      "spec": "Physics",
+      "pattern": "^2[0-9]IMP[0-9]{4}$",
+      "example": "21IMP1001",
+      "active": "Y"
+    },
+    {
+      "id": "INT-MSC-CHEM",
+      "name": "Integrated M.Sc Chemistry",
+      "fee": 0.0,
+      "duration": "5 Years",
+      "level": "Integrated",
+      "dept": "Science",
+      "spec": "Chemistry",
+      "pattern": "^2[0-9]IMC[0-9]{4}$",
+      "example": "21IMC1001",
+      "active": "Y"
+    },
+    {
+      "id": "INT-MSC-MATH",
+      "name": "Integrated M.Sc Mathematics",
+      "fee": 0.0,
+      "duration": "5 Years",
+      "level": "Integrated",
+      "dept": "Science",
+      "spec": "Mathematics",
+      "pattern": "^2[0-9]IMM[0-9]{4}$",
+      "example": "21IMM1001",
+      "active": "Y"
+    },
+    {
+      "id": "INT-MSC-PSYCH",
+      "name": "Integrated M.Sc Applied Psychology",
+      "fee": 0.0,
+      "duration": "5 Years",
+      "level": "Integrated",
+      "dept": "Science",
+      "spec": "Applied Psychology",
+      "pattern": "^2[0-9]IMY[0-9]{4}$",
+      "example": "21IMY1001",
+      "active": "Y"
+    },
+    {
+      "id": "PHD-ENG",
+      "name": "Ph.D. Engineering",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Doctoral",
+      "dept": "Engineering",
+      "spec": "",
+      "pattern": "^2[0-9]PHD[0-9]{4}$",
+      "example": "24PHD1001",
+      "active": "Y"
+    },
+    {
+      "id": "PHD-MGMT",
+      "name": "Ph.D. Management",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Doctoral",
+      "dept": "Management",
+      "spec": "",
+      "pattern": "^2[0-9]PHD[0-9]{4}$",
+      "example": "24PHD1001",
+      "active": "Y"
+    },
+    {
+      "id": "PHD-SCI-LANG",
+      "name": "Ph.D. Science & Languages",
+      "fee": 0.0,
+      "duration": "4 Years",
+      "level": "Doctoral",
+      "dept": "Science",
+      "spec": "",
+      "pattern": "^2[0-9]PHD[0-9]{4}$",
+      "example": "24PHD1001",
+      "active": "Y"
+    },
+    {
+      "id": "INT-PHD-ENG",
+      "name": "Integrated Ph.D. Engineering",
+      "fee": 0.0,
+      "duration": "5 Years",
+      "level": "Doctoral",
+      "dept": "Engineering",
+      "spec": "",
+      "pattern": "^2[0-9]IPH[0-9]{4}$",
+      "example": "24IPH1001",
+      "active": "Y"
+    }
+  ],
+  "companies": [
+    {
+      "id": "COM005",
+      "name": "Amazon Development Centre",
+      "email": "campus-in@amazon.com",
+      "industry": "E-Commerce & Cloud Computing"
+    },
+    {
+      "id": "COM001",
+      "name": "Tata Consultancy Services",
+      "email": "campus@tcs.com",
+      "industry": "IT Services & Consulting"
+    },
+    {
+      "id": "COM006",
+      "name": "Oracle India Pvt Ltd",
+      "email": "campus_recruitment@oracle.com",
+      "industry": "Enterprise Software & Database"
+    },
+    {
+      "id": "COM007",
+      "name": "Goldman Sachs Services",
+      "email": "campuscareers@gs.com",
+      "industry": "Financial Services & FinTech"
+    },
+    {
+      "id": "COM003",
+      "name": "Wipro Enterprises",
+      "email": "careers@wipro.com",
+      "industry": "IT Services & Consulting"
+    },
+    {
+      "id": "COM010",
+      "name": "Zomato Limited",
+      "email": "earlycareers@zomato.com",
+      "industry": "FoodTech & Consumer Internet"
+    },
+    {
+      "id": "COM009",
+      "name": "Flipkart Internet Pvt Ltd",
+      "email": "hiring@flipkart.com",
+      "industry": "E-Commerce & Retail Tech"
+    },
+    {
+      "id": "COM004",
+      "name": "Microsoft India",
+      "email": "indiarecruiting@microsoft.com",
+      "industry": "Software Products & Cloud"
+    },
+    {
+      "id": "COM002",
+      "name": "Infosys Limited",
+      "email": "talent@infosys.com",
+      "industry": "IT Services & Consulting"
+    },
+    {
+      "id": "COM008",
+      "name": "Cisco Systems India",
+      "email": "talent_apac@cisco.com",
+      "industry": "Networking & Cyber Security"
+    }
+  ],
+  "drives": [
+    {
+      "id": "DRV005",
+      "title": "Associate Applications Engineer",
+      "companyId": "COM006",
+      "minCgpa": 8.0,
+      "driveDate": "2026-10-08",
+      "deadline": "2026-10-01",
+      "openings": 12,
+      "ctc": 16.0,
+      "location": "Bengaluru / Hyderabad",
+      "branches": "CSE, IT, ECE, Data Science",
+      "process": "Round 1: Oracle Technical Assessment (SQL, Algorithms & CS Fundamentals) "
+    },
+    {
+      "id": "DRV002",
+      "title": "Associate Software Engineer",
+      "companyId": "COM001",
+      "minCgpa": 6.5,
+      "driveDate": "2026-09-28",
+      "deadline": "2026-09-22",
+      "openings": 50,
+      "ctc": 7.5,
+      "location": "Pan India (Chennai / Bengaluru / Pune)",
+      "branches": "CSE, IT, ECE, Data Science",
+      "process": "Round 1: TCS NQT Cognitive & Coding Assessment "
+    },
+    {
+      "id": "DRV007",
+      "title": "Backend Software Engineer",
+      "companyId": "COM009",
+      "minCgpa": 8.0,
+      "driveDate": "2026-10-15",
+      "deadline": "2026-10-07",
+      "openings": 18,
+      "ctc": 20.0,
+      "location": "Bengaluru",
+      "branches": "CSE, IT, ECE, Data Science",
+      "process": "Round 1: Machine Coding Round (Object-Oriented Design & Clean Code) "
+    },
+    {
+      "id": "DRV004",
+      "title": "Cloud Support Associate",
+      "companyId": "COM005",
+      "minCgpa": 7.5,
+      "driveDate": "2026-10-05",
+      "deadline": "2026-09-29",
+      "openings": 20,
+      "ctc": 18.5,
+      "location": "Bengaluru / Hyderabad",
+      "branches": "CSE, IT, ECE, Data Science",
+      "process": "Round 1: Amazon Online Assessment (Debugging & Cloud Systems) "
+    },
+    {
+      "id": "DRV008",
+      "title": "Network Consulting Engineer",
+      "companyId": "COM008",
+      "minCgpa": 7.5,
+      "driveDate": "2026-10-18",
+      "deadline": "2026-10-10",
+      "openings": 15,
+      "ctc": 15.0,
+      "location": "Bengaluru / Chennai",
+      "branches": "CSE, IT, ECE, Data Science",
+      "process": "Round 1: Cisco Online Test (Algorithms, Computer Networks, OS) "
+    },
+    {
+      "id": "DRV001",
+      "title": "Software Development Engineer I",
+      "companyId": "COM004",
+      "minCgpa": 8.5,
+      "driveDate": "2026-09-25",
+      "deadline": "2026-09-20",
+      "openings": 15,
+      "ctc": 44.0,
+      "location": "Bengaluru / Hyderabad",
+      "branches": "CSE, IT, ECE, Data Science",
+      "process": "Round 1: Online Coding Assessment (DSA & Problem Solving) "
+    },
+    {
+      "id": "DRV003",
+      "title": "Systems Engineer - Specialist",
+      "companyId": "COM002",
+      "minCgpa": 7.0,
+      "driveDate": "2026-10-02",
+      "deadline": "2026-09-26",
+      "openings": 25,
+      "ctc": 9.5,
+      "location": "Bengaluru / Mysuru / Hyderabad",
+      "branches": "CSE, IT, ECE, Data Science",
+      "process": "Round 1: InfyTQ Online Programming Test (Advanced Algorithms) "
+    },
+    {
+      "id": "DRV006",
+      "title": "Technology Analyst",
+      "companyId": "COM007",
+      "minCgpa": 8.5,
+      "driveDate": "2026-10-12",
+      "deadline": "2026-10-04",
+      "openings": 10,
+      "ctc": 24.0,
+      "location": "Bengaluru",
+      "branches": "CSE, IT, ECE, Data Science",
+      "process": "Round 1: HackerRank Technical Assessment (Advanced DSA & Math) "
+    }
+  ],
+  "eligibilities": [
+    {
+      "driveId": "DRV001",
+      "progId": "BCE"
+    },
+    {
+      "driveId": "DRV001",
+      "progId": "BCT"
+    },
+    {
+      "driveId": "DRV001",
+      "progId": "BDS"
+    },
+    {
+      "driveId": "DRV001",
+      "progId": "BTECH-CSE"
+    },
+    {
+      "driveId": "DRV001",
+      "progId": "BTECH-CSE-AIDA"
+    },
+    {
+      "driveId": "DRV001",
+      "progId": "BTECH-CSE-AIML"
+    },
+    {
+      "driveId": "DRV001",
+      "progId": "BTECH-CSE-BLOCK"
+    },
+    {
+      "driveId": "DRV001",
+      "progId": "BTECH-CSE-CYBER"
+    },
+    {
+      "driveId": "DRV001",
+      "progId": "BTECH-CSE-DS"
+    },
+    {
+      "driveId": "DRV001",
+      "progId": "BTECH-CSE-GAMING"
+    },
+    {
+      "driveId": "DRV001",
+      "progId": "BTECH-CSE-IOT"
+    },
+    {
+      "driveId": "DRV001",
+      "progId": "BTECH-CSE-SWE"
+    },
+    {
+      "driveId": "DRV001",
+      "progId": "BTECH-IT"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BCE"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BCT"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BCV"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BEC"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BEE"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BME"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-AERO"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-BIOENG"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-BIOTECH"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-CHEM"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-CIVIL"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-CIVIL-LT"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-CSE"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-CSE-AIDA"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-CSE-AIML"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-CSE-BLOCK"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-CSE-CYBER"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-CSE-DS"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-CSE-GAMING"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-CSE-IOT"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-CSE-SWE"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-ECE"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-ECE-AICYBER"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-ECE-BIOMED"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-ECE-EMBED"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-ECE-VLSI"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-EEE"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-ELE-COMP"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-ELE-INST"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-IT"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-MECH"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-MECH-AUTO"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-MECH-EV"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-MECH-MFG"
+    },
+    {
+      "driveId": "DRV002",
+      "progId": "BTECH-MECH-ROBOT"
+    },
+    {
+      "driveId": "DRV003",
+      "progId": "BCE"
+    },
+    {
+      "driveId": "DRV003",
+      "progId": "BCT"
+    },
+    {
+      "driveId": "DRV003",
+      "progId": "BEC"
+    },
+    {
+      "driveId": "DRV003",
+      "progId": "BTECH-CSE"
+    },
+    {
+      "driveId": "DRV003",
+      "progId": "BTECH-CSE-AIDA"
+    },
+    {
+      "driveId": "DRV003",
+      "progId": "BTECH-CSE-AIML"
+    },
+    {
+      "driveId": "DRV003",
+      "progId": "BTECH-CSE-BLOCK"
+    },
+    {
+      "driveId": "DRV003",
+      "progId": "BTECH-CSE-CYBER"
+    },
+    {
+      "driveId": "DRV003",
+      "progId": "BTECH-CSE-DS"
+    },
+    {
+      "driveId": "DRV003",
+      "progId": "BTECH-CSE-GAMING"
+    },
+    {
+      "driveId": "DRV003",
+      "progId": "BTECH-CSE-IOT"
+    },
+    {
+      "driveId": "DRV003",
+      "progId": "BTECH-CSE-SWE"
+    },
+    {
+      "driveId": "DRV003",
+      "progId": "BTECH-ECE"
+    },
+    {
+      "driveId": "DRV003",
+      "progId": "BTECH-ECE-EMBED"
+    },
+    {
+      "driveId": "DRV003",
+      "progId": "BTECH-ECE-VLSI"
+    },
+    {
+      "driveId": "DRV003",
+      "progId": "BTECH-IT"
+    },
+    {
+      "driveId": "DRV004",
+      "progId": "BCE"
+    },
+    {
+      "driveId": "DRV004",
+      "progId": "BCT"
+    },
+    {
+      "driveId": "DRV004",
+      "progId": "BDS"
+    },
+    {
+      "driveId": "DRV004",
+      "progId": "BEC"
+    },
+    {
+      "driveId": "DRV004",
+      "progId": "BTECH-CSE"
+    },
+    {
+      "driveId": "DRV004",
+      "progId": "BTECH-CSE-AIDA"
+    },
+    {
+      "driveId": "DRV004",
+      "progId": "BTECH-CSE-AIML"
+    },
+    {
+      "driveId": "DRV004",
+      "progId": "BTECH-CSE-BLOCK"
+    },
+    {
+      "driveId": "DRV004",
+      "progId": "BTECH-CSE-CYBER"
+    },
+    {
+      "driveId": "DRV004",
+      "progId": "BTECH-CSE-DS"
+    },
+    {
+      "driveId": "DRV004",
+      "progId": "BTECH-CSE-GAMING"
+    },
+    {
+      "driveId": "DRV004",
+      "progId": "BTECH-CSE-IOT"
+    },
+    {
+      "driveId": "DRV004",
+      "progId": "BTECH-CSE-SWE"
+    },
+    {
+      "driveId": "DRV004",
+      "progId": "BTECH-ECE"
+    },
+    {
+      "driveId": "DRV004",
+      "progId": "BTECH-ECE-EMBED"
+    },
+    {
+      "driveId": "DRV004",
+      "progId": "BTECH-ECE-VLSI"
+    },
+    {
+      "driveId": "DRV004",
+      "progId": "BTECH-IT"
+    },
+    {
+      "driveId": "DRV005",
+      "progId": "BCE"
+    },
+    {
+      "driveId": "DRV005",
+      "progId": "BCT"
+    },
+    {
+      "driveId": "DRV006",
+      "progId": "BCE"
+    },
+    {
+      "driveId": "DRV006",
+      "progId": "BCT"
+    },
+    {
+      "driveId": "DRV006",
+      "progId": "BDS"
+    },
+    {
+      "driveId": "DRV007",
+      "progId": "BCE"
+    },
+    {
+      "driveId": "DRV007",
+      "progId": "BCT"
+    },
+    {
+      "driveId": "DRV007",
+      "progId": "BDS"
+    },
+    {
+      "driveId": "DRV008",
+      "progId": "BCE"
+    },
+    {
+      "driveId": "DRV008",
+      "progId": "BCT"
+    },
+    {
+      "driveId": "DRV008",
+      "progId": "BEC"
+    }
+  ],
+  "batches": [
+    {
+      "progId": "PROG01",
+      "batchNo": "BAT001",
+      "schedule": "Mon-Wed-Fri 09:00-11:00",
+      "room": "Lab 401",
+      "start": "2025-08-01",
+      "end": "2025-10-31"
+    },
+    {
+      "progId": "PROG02",
+      "batchNo": "BAT002",
+      "schedule": "Tue-Thu-Sat 10:00-12:00",
+      "room": "AI Lab 201",
+      "start": "2025-08-01",
+      "end": "2025-11-30"
+    },
+    {
+      "progId": "PROG03",
+      "batchNo": "BAT003",
+      "schedule": "Mon-Wed-Fri 14:00-16:00",
+      "room": "Cloud Lab 105",
+      "start": "2025-08-01",
+      "end": "2025-10-31"
+    },
+    {
+      "progId": "PROG04",
+      "batchNo": "BAT004",
+      "schedule": "Mon-to-Fri 16:30-18:00",
+      "room": "Seminar Hall B",
+      "start": "2025-08-01",
+      "end": "2025-09-30"
+    },
+    {
+      "progId": "PROG05",
+      "batchNo": "BAT005",
+      "schedule": "Tue-Thu 14:00-17:00",
+      "room": "Security SOC Lab",
+      "start": "2025-08-01",
+      "end": "2025-11-30"
+    }
+  ],
+  "interviewers": [
+    {
+      "name": "Vikram Malhotra",
+      "roundNo": 1
+    },
+    {
+      "name": "Neeraj Chopra",
+      "roundNo": 1
+    },
+    {
+      "name": "Sangeeta Rao",
+      "roundNo": 2
+    },
+    {
+      "name": "Rajeshwari Iyer",
+      "roundNo": 2
+    },
+    {
+      "name": "Arvind Swamy",
+      "roundNo": 3
+    },
+    {
+      "name": "Meenakshi Sundaram",
+      "roundNo": 3
+    }
+  ],
+  "students": [
+    {
+      "id": "STU023",
+      "name": "Achyut Ranaut",
+      "email": "achyut.ranaut2025@vitstudent.ac.in",
+      "street": "Vandalur-Kelambakkam Road",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "dob": "2007-01-19",
+      "cgpa": 8.5,
+      "branch": "B.Tech CSE",
+      "regNo": "25BCE1799",
+      "progId": "BTECH-CSE",
+      "status": "NOT_PLACED"
+    },
+    {
+      "id": "STU002",
+      "name": "Shreyash Muthmare",
+      "email": "muthmaruvitpe@vitstudent.ac.in",
+      "street": "VIT Chennai Vandalur \u2013 Kelambakkam Road, Keelakottaiyur Village, Melakottaiyur, Chennai \u2013 600 127, Tamil Nadu, India",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "dob": "2000-04-17",
+      "cgpa": 9.99,
+      "branch": "B.Tech CSE",
+      "regNo": "26BCE6666",
+      "progId": "BTECH-CSE",
+      "status": "PLACED"
+    }
+  ],
+  "users": [
+    {
+      "id": "USR003",
+      "username": "recruiter1",
+      "hash": "$2a$10$BxyD.tMJe9o0quIhc8uPD.y3o3t0GTL8LMAshkm.Q5eO3dWKvzrbe",
+      "role": "ROLE_RECRUITER",
+      "refId": "COM004",
+      "fullName": "Vikram Singh",
+      "email": "vikram.singh@microsoft.com"
+    },
+    {
+      "id": "USR004",
+      "username": "recruiter2",
+      "hash": "$2a$10$BxyD.tMJe9o0quIhc8uPD.y3o3t0GTL8LMAshkm.Q5eO3dWKvzrbe",
+      "role": "ROLE_RECRUITER",
+      "refId": "COM001",
+      "fullName": "Neha Sharma",
+      "email": "neha.sharma@tcs.com"
+    },
+    {
+      "id": "USR005",
+      "username": "admin",
+      "hash": "$2a$10$KHBE6HpMEuuwCB5t5YHJt.jK5MscreiVunOXG.SdV0Dl7Z4zlEBYm",
+      "role": "ROLE_ADMIN",
+      "refId": "ADMIN01",
+      "fullName": "",
+      "email": ""
+    },
+    {
+      "id": "USR_COM008",
+      "username": "com008_recruiter",
+      "hash": "$2a$10$BxyD.tMJe9o0quIhc8uPD.y3o3t0GTL8LMAshkm.Q5eO3dWKvzrbe",
+      "role": "ROLE_RECRUITER",
+      "refId": "COM008",
+      "fullName": "Cisco Systems India Recruiter",
+      "email": "talent_apac@cisco.com"
+    },
+    {
+      "id": "USR_COM007",
+      "username": "com007_recruiter",
+      "hash": "$2a$10$BxyD.tMJe9o0quIhc8uPD.y3o3t0GTL8LMAshkm.Q5eO3dWKvzrbe",
+      "role": "ROLE_RECRUITER",
+      "refId": "COM007",
+      "fullName": "Goldman Sachs Services Recruiter",
+      "email": "campuscareers@gs.com"
+    },
+    {
+      "id": "USR_COM002",
+      "username": "com002_recruiter",
+      "hash": "$2a$10$BxyD.tMJe9o0quIhc8uPD.y3o3t0GTL8LMAshkm.Q5eO3dWKvzrbe",
+      "role": "ROLE_RECRUITER",
+      "refId": "COM002",
+      "fullName": "Infosys Limited Recruiter",
+      "email": "talent@infosys.com"
+    },
+    {
+      "id": "USR_COM003",
+      "username": "com003_recruiter",
+      "hash": "$2a$10$BxyD.tMJe9o0quIhc8uPD.y3o3t0GTL8LMAshkm.Q5eO3dWKvzrbe",
+      "role": "ROLE_RECRUITER",
+      "refId": "COM003",
+      "fullName": "Wipro Enterprises Recruiter",
+      "email": "careers@wipro.com"
+    },
+    {
+      "id": "USR_COM009",
+      "username": "com009_recruiter",
+      "hash": "$2a$10$BxyD.tMJe9o0quIhc8uPD.y3o3t0GTL8LMAshkm.Q5eO3dWKvzrbe",
+      "role": "ROLE_RECRUITER",
+      "refId": "COM009",
+      "fullName": "Flipkart Internet Pvt Ltd Recruiter",
+      "email": "hiring@flipkart.com"
+    },
+    {
+      "id": "USR_COM010",
+      "username": "com010_recruiter",
+      "hash": "$2a$10$BxyD.tMJe9o0quIhc8uPD.y3o3t0GTL8LMAshkm.Q5eO3dWKvzrbe",
+      "role": "ROLE_RECRUITER",
+      "refId": "COM010",
+      "fullName": "Zomato Limited Recruiter",
+      "email": "earlycareers@zomato.com"
+    },
+    {
+      "id": "USR_COM005",
+      "username": "com005_recruiter",
+      "hash": "$2a$10$BxyD.tMJe9o0quIhc8uPD.y3o3t0GTL8LMAshkm.Q5eO3dWKvzrbe",
+      "role": "ROLE_RECRUITER",
+      "refId": "COM005",
+      "fullName": "Amazon Development Centre Recruiter",
+      "email": "campus-in@amazon.com"
+    },
+    {
+      "id": "USR_COM006",
+      "username": "com006_recruiter",
+      "hash": "$2a$10$BxyD.tMJe9o0quIhc8uPD.y3o3t0GTL8LMAshkm.Q5eO3dWKvzrbe",
+      "role": "ROLE_RECRUITER",
+      "refId": "COM006",
+      "fullName": "Oracle India Pvt Ltd Recruiter",
+      "email": "campus_recruitment@oracle.com"
+    },
+    {
+      "id": "USR_147F2F34",
+      "username": "rahul.singh",
+      "hash": "$2a$10$BxyD.tMJe9o0quIhc8uPD.y3o3t0GTL8LMAshkm.Q5eO3dWKvzrbe",
+      "role": "ROLE_RECRUITER",
+      "refId": "COM004",
+      "fullName": "Rahul Singh",
+      "email": "rahul@microsoft.com"
+    },
+    {
+      "id": "USR_20C08AD6",
+      "username": "infosys_lead",
+      "hash": "$2a$10$S2yrFF4KZL12c3yRJlZMUuHzHtMlBaeAMmzFOwBtvE1JxwRrJZRvO",
+      "role": "ROLE_RECRUITER",
+      "refId": "COM002",
+      "fullName": "Sudha Murty",
+      "email": "sudha@infosys.com"
+    },
+    {
+      "id": "USR_STU023",
+      "username": "25bce1799",
+      "hash": "$2a$10$BxyD.tMJe9o0quIhc8uPD.y3o3t0GTL8LMAshkm.Q5eO3dWKvzrbe",
+      "role": "ROLE_STUDENT",
+      "refId": "STU023",
+      "fullName": "",
+      "email": ""
+    },
+    {
+      "id": "USR_92AD450E",
+      "username": "rohan_chamkta_bhosda",
+      "hash": "$2a$10$BxyD.tMJe9o0quIhc8uPD.y3o3t0GTL8LMAshkm.Q5eO3dWKvzrbe",
+      "role": "ROLE_RECRUITER",
+      "refId": "COM009",
+      "fullName": "rohan bhosda",
+      "email": "rohan@flipkart.com"
+    },
+    {
+      "id": "USR_STU002",
+      "username": "26bce6666",
+      "hash": "$2a$10$BxyD.tMJe9o0quIhc8uPD.y3o3t0GTL8LMAshkm.Q5eO3dWKvzrbe",
+      "role": "ROLE_STUDENT",
+      "refId": "STU002",
+      "fullName": "",
+      "email": ""
+    }
+  ],
+  "recruiterCompanies": [
+    {
+      "userId": "USR003",
+      "companyId": "COM001"
+    },
+    {
+      "userId": "USR003",
+      "companyId": "COM004"
+    },
+    {
+      "userId": "USR004",
+      "companyId": "COM001"
+    },
+    {
+      "userId": "USR_147F2F34",
+      "companyId": "COM004"
+    },
+    {
+      "userId": "USR_20C08AD6",
+      "companyId": "COM002"
+    },
+    {
+      "userId": "USR_92AD450E",
+      "companyId": "COM009"
+    },
+    {
+      "userId": "USR_COM002",
+      "companyId": "COM002"
+    },
+    {
+      "userId": "USR_COM003",
+      "companyId": "COM003"
+    },
+    {
+      "userId": "USR_COM005",
+      "companyId": "COM005"
+    },
+    {
+      "userId": "USR_COM006",
+      "companyId": "COM006"
+    },
+    {
+      "userId": "USR_COM007",
+      "companyId": "COM007"
+    },
+    {
+      "userId": "USR_COM008",
+      "companyId": "COM008"
+    },
+    {
+      "userId": "USR_COM009",
+      "companyId": "COM009"
+    },
+    {
+      "userId": "USR_COM010",
+      "companyId": "COM010"
+    }
+  ],
+  "applications": [
+    {
+      "id": "APP036",
+      "studentId": "STU023",
+      "driveId": "DRV001",
+      "applyDate": "2026-09-12",
+      "status": "REJECTED"
+    },
+    {
+      "id": "APP038",
+      "studentId": "STU002",
+      "driveId": "DRV007",
+      "applyDate": "2026-09-17",
+      "status": "ACCEPTED"
+    },
+    {
+      "id": "APP037",
+      "studentId": "STU023",
+      "driveId": "DRV002",
+      "applyDate": "2026-09-15",
+      "status": "APPLIED"
+    }
+  ],
+  "interviews": [
+    {
+      "appId": "APP038",
+      "name": "Sangeeta Rao",
+      "oa": "",
+      "gd": "90",
+      "hr": "",
+      "result": "CLEARED",
+      "online": "Y",
+      "offline": "N"
+    },
+    {
+      "appId": "APP038",
+      "name": "Vikram Malhotra",
+      "oa": "96",
+      "gd": "",
+      "hr": "",
+      "result": "CLEARED",
+      "online": "Y",
+      "offline": "N"
+    },
+    {
+      "appId": "APP038",
+      "name": "Arvind Swamy",
+      "oa": "",
+      "gd": "",
+      "hr": "94",
+      "result": "CLEARED",
+      "online": "N",
+      "offline": "Y"
+    },
+    {
+      "appId": "APP036",
+      "name": "Vikram Malhotra",
+      "oa": "94",
+      "gd": "",
+      "hr": "",
+      "result": "CLEARED",
+      "online": "Y",
+      "offline": "N"
+    },
+    {
+      "appId": "APP036",
+      "name": "Arvind Swamy",
+      "oa": "",
+      "gd": "",
+      "hr": "80",
+      "result": "REJECTED",
+      "online": "N",
+      "offline": "Y"
+    },
+    {
+      "appId": "APP036",
+      "name": "Sangeeta Rao",
+      "oa": "",
+      "gd": "88",
+      "hr": "",
+      "result": "CLEARED",
+      "online": "Y",
+      "offline": "N"
+    }
+  ],
+  "offers": [
+    {
+      "id": "OFF001",
+      "appId": "APP038",
+      "date": "2026-09-01",
+      "ctc": 20.0,
+      "status": "ACCEPTED",
+      "acceptedAt": "2026-09-18 00:49:17"
+    }
+  ],
+  "resumes": [
+    {
+      "id": "RES_CCA0F8F7",
+      "studentId": "STU023",
+      "fileName": "Achyut_Ranaut_Resume (3).pdf",
+      "contentType": "application/pdf",
+      "fileSize": 63827,
+      "versionNo": 1,
+      "isCurrent": "N"
+    },
+    {
+      "id": "RES_B3A68AE2",
+      "studentId": "STU002",
+      "fileName": "Achyut_Ranaut_Resume (3).pdf",
+      "contentType": "application/pdf",
+      "fileSize": 63827,
+      "versionNo": 1,
+      "isCurrent": "Y"
+    },
+    {
+      "id": "RES_520A2BE5",
+      "studentId": "STU023",
+      "fileName": "test_verification_resume.pdf",
+      "contentType": "application/pdf",
+      "fileSize": 79,
+      "versionNo": 2,
+      "isCurrent": "Y"
+    }
+  ]
+}

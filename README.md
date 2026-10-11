@@ -423,12 +423,17 @@ student-placement-recruitment-portal/
 
 ### One-Command Full Stack Launcher (Recommended)
 
-To launch the complete infrastructure (validates Oracle Database, starts Spring Boot backend on port 8080, and starts React Vite frontend on port 3000):
-
+To launch the complete infrastructure with the default **Oracle Database 23ai** backend:
 ```bash
 chmod +x ./run_portal.sh
 ./run_portal.sh
 ```
+
+To launch with the modern **Neo4j 5.x Graph Database** backend:
+```bash
+./run_portal.sh --db neo4j
+```
+*When running with `--db neo4j`, the portal starts the official Neo4j container (`portal-neo4j` with APOC plugin enabled), runs the Spring Boot backend under profile `neo4j`, and activates the interactive in-browser Cypher console and dynamic graph visualization pages (`/student/graph`, `/admin/graph`).*
 
 ---
 

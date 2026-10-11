@@ -10,7 +10,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-public class ProgramService {
+@org.springframework.context.annotation.Profile({"oracle", "h2", "default", "!neo4j"})
+public class ProgramService implements IProgramService {
 
     private final ProgramRepository programRepository;
     private final ProgramRegistrationRepository registrationRepository;

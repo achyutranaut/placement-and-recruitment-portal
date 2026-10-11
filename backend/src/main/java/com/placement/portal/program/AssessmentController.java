@@ -13,9 +13,9 @@ import java.util.List;
 @Tag(name = "Assessments", description = "Batch-level skill assessments and criteria")
 public class AssessmentController {
 
-    private final ProgramService programService;
+    private final IProgramService programService;
 
-    public AssessmentController(ProgramService programService) {
+    public AssessmentController(IProgramService programService) {
         this.programService = programService;
     }
 

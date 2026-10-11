@@ -15,9 +15,9 @@ import java.util.List;
 @Tag(name = "Admin Recruiter Management", description = "Endpoints for administrator to assign and revoke recruiter company authorizations")
 public class AdminRecruiterController {
 
-    private final CompanyService companyService;
+    private final ICompanyService companyService;
 
-    public AdminRecruiterController(CompanyService companyService) {
+    public AdminRecruiterController(ICompanyService companyService) {
         this.companyService = companyService;
     }
 

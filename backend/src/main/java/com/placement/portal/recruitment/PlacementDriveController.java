@@ -15,22 +15,26 @@ import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 
+import com.placement.portal.auth.IUserContextService;
+import com.placement.portal.auth.PortalUserDto;
+import com.placement.portal.auth.Role;
+
 @RestController
 @RequestMapping("/api/v1/drives")
 @Tag(name = "Placement Drives", description = "Campus placement drives and eligibility criteria")
 public class PlacementDriveController {
 
-    private final PlacementDriveService driveService;
-    private final UserRepository userRepository;
+    private final IPlacementDriveService driveService;
+    private final IUserContextService userContextService;
     private final com.placement.portal.company.RecruiterAuthorizationService recruiterAuthService;
 
     public PlacementDriveController(
-            PlacementDriveService driveService,
-            UserRepository userRepository,
+            IPlacementDriveService driveService,
+            IUserContextService userContextService,
             com.placement.portal.company.RecruiterAuthorizationService recruiterAuthService
     ) {
         this.driveService = driveService;
-        this.userRepository = userRepository;
+        this.userContextService = userContextService;
         this.recruiterAuthService = recruiterAuthService;
     }
 
@@ -63,7 +67,7 @@ public class PlacementDriveController {
         if (principal == null) {
             throw new AccessDeniedException("Authentication required to evaluate eligibility");
         }
-        PortalUser user = userRepository.findByUsername(principal.getName())
+        PortalUserDto user = userContextService.findByUsername(principal.getName())
                 .orElseThrow(() -> new AccessDeniedException("Authenticated user not found"));
 
         String studentId = user.getReferenceId();
@@ -91,7 +95,7 @@ public class PlacementDriveController {
         if (principal == null) {
             throw new AccessDeniedException("Authentication required to evaluate eligibility");
         }
-        PortalUser user = userRepository.findByUsername(principal.getName())
+        PortalUserDto user = userContextService.findByUsername(principal.getName())
                 .orElseThrow(() -> new AccessDeniedException("Authenticated user not found"));
 
         String studentId = user.getReferenceId();
@@ -112,7 +116,7 @@ public class PlacementDriveController {
             Principal principal
     ) {
         if (principal != null) {
-            userRepository.findByUsername(principal.getName()).ifPresent(user -> {
+            userContextService.findByUsername(principal.getName()).ifPresent(user -> {
                 if (user.getRole() == Role.ROLE_STUDENT) {
                     if (user.getReferenceId() == null || !user.getReferenceId().equalsIgnoreCase(studentId)) {
                         throw new AccessDeniedException("Access denied: Students may only evaluate their own eligibility.");
@@ -145,7 +149,7 @@ public class PlacementDriveController {
             Principal principal
     ) {
         if (principal != null) {
-            var userOpt = userRepository.findByUsername(principal.getName());
+            var userOpt = userContextService.findByUsername(principal.getName());
             if (userOpt.isPresent() && userOpt.get().getRole() == Role.ROLE_RECRUITER) {
                 recruiterAuthService.requireAuthorizedForDrive(principal, id);
             }

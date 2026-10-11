@@ -15,9 +15,9 @@ import java.util.List;
 @Tag(name = "Jobs", description = "Company job designations and openings")
 public class JobController {
 
-    private final CompanyService companyService;
+    private final ICompanyService companyService;
 
-    public JobController(CompanyService companyService) {
+    public JobController(ICompanyService companyService) {
         this.companyService = companyService;
     }
 

@@ -128,6 +128,16 @@ export default function Navbar() {
                 >
                   Applications Tracker
                 </Link>
+                <Link
+                  to="/student/graph"
+                  className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    location.pathname === '/student/graph'
+                      ? 'bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200'
+                      : 'text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50'
+                  }`}
+                >
+                  Placement Graph
+                </Link>
               </>
             )}
 
@@ -159,6 +169,16 @@ export default function Navbar() {
                   Placement Office & Database
                 </Link>
                 <Link
+                  to="/admin/graph"
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    location.pathname === '/admin/graph'
+                      ? 'bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200'
+                      : 'text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50'
+                  }`}
+                >
+                  Graph Explorer
+                </Link>
+                <Link
                   to="/admin/sql-compiler"
                   className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                     location.pathname === '/admin/sql-compiler'
@@ -166,7 +186,7 @@ export default function Navbar() {
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                   }`}
                 >
-                  SQL Compiler
+                  Database Console
                 </Link>
               </>
             )}

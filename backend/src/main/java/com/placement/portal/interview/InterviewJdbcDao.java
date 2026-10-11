@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.sql.CallableStatement;
 
 @Repository
+@org.springframework.context.annotation.Profile({"oracle", "h2", "default", "!neo4j"})
 public class InterviewJdbcDao {
 
     private static final Logger log = LoggerFactory.getLogger(InterviewJdbcDao.class);

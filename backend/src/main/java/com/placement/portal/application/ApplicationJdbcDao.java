@@ -11,6 +11,7 @@ import java.sql.Types;
 import java.time.LocalDate;
 
 @Repository
+@org.springframework.context.annotation.Profile({"oracle", "h2", "default", "!neo4j"})
 public class ApplicationJdbcDao {
 
     private static final Logger log = LoggerFactory.getLogger(ApplicationJdbcDao.class);

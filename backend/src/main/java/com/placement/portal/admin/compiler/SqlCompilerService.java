@@ -7,6 +7,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import org.springframework.context.annotation.Profile;
+
 import javax.sql.DataSource;
 import java.sql.*;
 import java.time.LocalDateTime;
@@ -14,7 +16,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
-public class SqlCompilerService {
+@Profile({"oracle", "h2", "default", "!neo4j"})
+public class SqlCompilerService implements ISqlCompilerService {
 
     private static final Logger log = LoggerFactory.getLogger(SqlCompilerService.class);
     private static final int MAX_SELECT_ROWS = 1000;
@@ -903,5 +906,17 @@ public class SqlCompilerService {
                     "ojdbc11"
             );
         }
+    }
+
+    @Override
+    public Map<String, Object> getBackendInfo() {
+        return Map.of(
+                "activeBackend", "oracle",
+                "databaseEngine", "ORACLE",
+                "databaseProduct", "Oracle 23ai Free",
+                "supportsGraph", false,
+                "supportsCypher", false,
+                "supportsSql", true
+        );
     }
 }

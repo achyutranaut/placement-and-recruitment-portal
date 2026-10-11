@@ -13,10 +13,26 @@ echo "   VIT Placement and Training Cell — Recruitment Portal"
 echo "   Academic Year 2025–2026 Campus Placement Drive Infrastructure"
 echo "================================================================="
 
-# Ensure Oracle Database and Redis containers are running if docker is installed
-DB_PROFILE="oracle"
+# Parse command-line arguments for database backend selection
+REQUESTED_DB=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --db)
+            REQUESTED_DB="$2"
+            shift 2
+            ;;
+        --db=*)
+            REQUESTED_DB="${1#*=}"
+            shift 1
+            ;;
+        *)
+            shift 1
+            ;;
+    esac
+done
+
+# Ensure Docker daemon is running if docker is installed
 if command -v docker >/dev/null 2>&1; then
-    # Check if docker daemon is running; if not, attempt to start Docker Desktop on macOS
     if ! docker info >/dev/null 2>&1; then
         echo "[*] Docker daemon is not running. Attempting to start Docker Desktop..."
         if [ -d "/Applications/Docker.app" ]; then
@@ -33,12 +49,35 @@ if command -v docker >/dev/null 2>&1; then
             echo ""
         fi
     fi
+fi
 
-    if docker info >/dev/null 2>&1; then
+if [ "$REQUESTED_DB" = "neo4j" ]; then
+    DB_PROFILE="neo4j"
+    echo "[*] Selected backend database: Neo4j Graph Database (--db neo4j)"
+    if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+        if ! nc -z localhost 7687 2>/dev/null; then
+            echo "[*] Starting Neo4j container via docker-compose..."
+            docker compose -f "$DIR/infrastructure/docker-compose.neo4j.yml" up -d
+            echo -n "[*] Waiting for Neo4j Bolt listener on port 7687"
+            for i in {1..30}; do
+                if nc -z localhost 7687 2>/dev/null; then
+                    echo " ready!"
+                    break
+                fi
+                echo -n "."
+                sleep 1
+            done
+            echo ""
+        else
+            echo "[✓] Neo4j detected active on port 7687 (Bolt)."
+        fi
+    fi
+else
+    # Default Oracle / auto-detect behavior
+    if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
         if ! nc -z localhost 1521 2>/dev/null; then
             echo "[*] Starting Oracle Database container..."
             docker start oracle-free 2>/dev/null || docker start portal-oracle-db 2>/dev/null || true
-            # Wait up to 25s for Oracle listener
             echo -n "[*] Waiting for Oracle Database listener on port 1521"
             for i in {1..25}; do
                 if nc -z localhost 1521 2>/dev/null; then
@@ -58,15 +97,15 @@ if command -v docker >/dev/null 2>&1; then
             docker start energy-trading-platform-redis-1 2>/dev/null || docker start portal-redis 2>/dev/null || true
         fi
     fi
-fi
 
-if nc -z localhost 1521 2>/dev/null; then
-    DB_PROFILE="oracle"
-    echo "[✓] Connecting to authoritative Oracle Database 23ai (port 1521)."
-else
-    echo "[!] Oracle Database not detected on port 1521."
-    echo "[*] Falling back to offline H2 profile with Oracle compatibility mode."
-    DB_PROFILE="h2"
+    if nc -z localhost 1521 2>/dev/null; then
+        DB_PROFILE="oracle"
+        echo "[✓] Connecting to authoritative Oracle Database 23ai (port 1521)."
+    else
+        echo "[!] Oracle Database not detected on port 1521."
+        echo "[*] Falling back to offline H2 profile with Oracle compatibility mode."
+        DB_PROFILE="h2"
+    fi
 fi
 
 # Clean up any lingering processes on ports 8080 or 3000 from previous runs

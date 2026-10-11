@@ -7,16 +7,24 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/admin/sql")
 @PreAuthorize("hasRole('ADMIN')")
 @Tag(name = "Admin SQL Compiler", description = "Dedicated Oracle SQL/PLSQL Compiler environment for authorized administrators")
 public class SqlCompilerController {
 
-    private final SqlCompilerService sqlCompilerService;
+    private final ISqlCompilerService sqlCompilerService;
 
-    public SqlCompilerController(SqlCompilerService sqlCompilerService) {
+    public SqlCompilerController(ISqlCompilerService sqlCompilerService) {
         this.sqlCompilerService = sqlCompilerService;
+    }
+
+    @GetMapping("/backend-info")
+    @Operation(summary = "Fetch active database backend information (Oracle vs Neo4j)")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getBackendInfo() {
+        return ResponseEntity.ok(ApiResponse.ok(sqlCompilerService.getBackendInfo()));
     }
 
     @PostMapping("/execute")

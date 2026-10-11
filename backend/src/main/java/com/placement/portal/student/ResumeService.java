@@ -13,7 +13,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
-public class ResumeService {
+@org.springframework.context.annotation.Profile({"oracle", "h2", "default", "!neo4j"})
+public class ResumeService implements IResumeService {
 
     private final StudentResumeRepository resumeRepository;
     private final StudentRepository studentRepository;
@@ -89,6 +90,22 @@ public class ResumeService {
                 .orElseThrow(() -> new ResourceNotFoundException("Resume not found with ID: " + resumeId));
     }
 
+    @Override
+    public byte[] getResumeBytes(String resumeId) {
+        return getResumeEntity(resumeId).getResumeData();
+    }
+
+    @Override
+    public String getResumeContentType(String resumeId) {
+        return getResumeEntity(resumeId).getContentType();
+    }
+
+    @Override
+    public String getResumeFileName(String resumeId) {
+        return getResumeEntity(resumeId).getFileName();
+    }
+
+    @Override
     public ResumeDto getResumeById(String resumeId) {
         return ResumeDto.fromEntity(getResumeEntity(resumeId));
     }

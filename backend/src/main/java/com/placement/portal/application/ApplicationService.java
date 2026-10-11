@@ -28,7 +28,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-public class ApplicationService {
+@org.springframework.context.annotation.Profile({"oracle", "h2", "default", "!neo4j"})
+public class ApplicationService implements IApplicationService {
 
     private final ApplicationRepository applicationRepository;
     private final DailyRoutineRepository dailyRoutineRepository;

@@ -17,6 +17,7 @@ import RecruiterRegisterPage from './pages/RecruiterRegisterPage';
 import RecruiterSelectCompanyPage from './pages/RecruiterSelectCompanyPage';
 import AdminPortal from './pages/AdminPortal';
 import SqlCompilerPage from './pages/SqlCompilerPage';
+import GraphViewPage from './pages/GraphViewPage';
 
 function ProtectedRoute({ children, allowedRoles }) {
   const { user } = useAuth();
@@ -152,6 +153,36 @@ export default function App() {
               <ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
                 <MainLayout>
                   <SqlCompilerPage />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/graph"
+            element={
+              <ProtectedRoute allowedRoles={['ROLE_STUDENT', 'ROLE_ADMIN']}>
+                <MainLayout>
+                  <GraphViewPage />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/graph"
+            element={
+              <ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
+                <MainLayout>
+                  <GraphViewPage />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/graph"
+            element={
+              <ProtectedRoute allowedRoles={['ROLE_STUDENT', 'ROLE_ADMIN', 'ROLE_RECRUITER']}>
+                <MainLayout>
+                  <GraphViewPage />
                 </MainLayout>
               </ProtectedRoute>
             }

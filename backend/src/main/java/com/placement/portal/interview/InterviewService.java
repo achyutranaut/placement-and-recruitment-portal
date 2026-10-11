@@ -12,7 +12,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-public class InterviewService {
+@org.springframework.context.annotation.Profile({"oracle", "h2", "default", "!neo4j"})
+public class InterviewService implements IInterviewService {
 
     private final InterviewRepository interviewRepository;
     private final InterviewerRoundRepository roundRepository;

@@ -13,9 +13,9 @@ import java.util.List;
 @Tag(name = "Batches", description = "Classroom schedules and physical batches")
 public class BatchController {
 
-    private final ProgramService programService;
+    private final IProgramService programService;
 
-    public BatchController(ProgramService programService) {
+    public BatchController(IProgramService programService) {
         this.programService = programService;
     }
 

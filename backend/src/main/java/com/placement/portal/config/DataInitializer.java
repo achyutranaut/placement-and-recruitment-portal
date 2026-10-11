@@ -22,6 +22,7 @@ import java.util.List;
  * NO MOCK STUDENTS, COMPANIES, DRIVES, OFFERS, OR APPLICATIONS ARE SEEDED.
  */
 @Component
+@org.springframework.context.annotation.Profile("!neo4j")
 @Order(1)
 public class DataInitializer implements CommandLineRunner {
 

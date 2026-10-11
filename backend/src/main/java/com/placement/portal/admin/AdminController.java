@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/v1/admin")
 @PreAuthorize("hasRole('ADMIN')")
+@org.springframework.context.annotation.Profile("!neo4j")
 @Tag(name = "Admin", description = "University placement administration control panel")
 public class AdminController {
 

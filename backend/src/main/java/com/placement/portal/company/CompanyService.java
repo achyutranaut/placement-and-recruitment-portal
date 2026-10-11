@@ -8,7 +8,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-public class CompanyService {
+@org.springframework.context.annotation.Profile({"oracle", "h2", "default", "!neo4j"})
+public class CompanyService implements ICompanyService {
 
     private final CompanyRepository companyRepository;
     private final EmailCompanyRepository emailCompanyRepository;

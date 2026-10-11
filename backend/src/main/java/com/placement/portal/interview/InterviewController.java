@@ -20,25 +20,31 @@ import java.security.Principal;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.placement.portal.application.ApplicationDto;
+import com.placement.portal.application.IApplicationService;
+import com.placement.portal.auth.IUserContextService;
+import com.placement.portal.auth.PortalUserDto;
+import com.placement.portal.auth.Role;
+
 @RestController
 @RequestMapping("/api/v1/interviews")
 @Tag(name = "Interviews", description = "Multi-round candidate interviews, evaluation scores, and results")
 public class InterviewController {
 
-    private final InterviewService interviewService;
-    private final UserRepository userRepository;
-    private final ApplicationRepository applicationRepository;
+    private final IInterviewService interviewService;
+    private final IUserContextService userContextService;
+    private final IApplicationService applicationService;
     private final RecruiterAuthorizationService recruiterAuthService;
 
     public InterviewController(
-            InterviewService interviewService,
-            UserRepository userRepository,
-            ApplicationRepository applicationRepository,
+            IInterviewService interviewService,
+            IUserContextService userContextService,
+            IApplicationService applicationService,
             RecruiterAuthorizationService recruiterAuthService
     ) {
         this.interviewService = interviewService;
-        this.userRepository = userRepository;
-        this.applicationRepository = applicationRepository;
+        this.userContextService = userContextService;
+        this.applicationService = applicationService;
         this.recruiterAuthService = recruiterAuthService;
     }
 
@@ -63,7 +69,7 @@ public class InterviewController {
         if (principal == null) {
             throw new AccessDeniedException("Authentication required");
         }
-        PortalUser user = userRepository.findByUsername(principal.getName())
+        PortalUserDto user = userContextService.findByUsername(principal.getName())
                 .orElseThrow(() -> new AccessDeniedException("User not found"));
         String studentId = user.getReferenceId();
         if (studentId == null || studentId.isBlank()) {
@@ -80,14 +86,18 @@ public class InterviewController {
             Principal principal
     ) {
         if (principal != null) {
-            var userOpt = userRepository.findByUsername(principal.getName());
+            var userOpt = userContextService.findByUsername(principal.getName());
             if (userOpt.isPresent()) {
-                PortalUser user = userOpt.get();
+                PortalUserDto user = userOpt.get();
                 if (user.getRole() == Role.ROLE_STUDENT) {
-                    Application app = applicationRepository.findById(applicationId).orElse(null);
-                    if (app != null && (user.getReferenceId() == null || !user.getReferenceId().equalsIgnoreCase(app.getStudentId()))) {
-                        throw new AccessDeniedException("Access denied: You may only view interviews for your own applications.");
-                    }
+                    try {
+                        ApplicationDto app = applicationService.getApplicationById(applicationId);
+                        if (app != null && (user.getReferenceId() == null || !user.getReferenceId().equalsIgnoreCase(app.getStudentId()))) {
+                            throw new AccessDeniedException("Access denied: You may only view interviews for your own applications.");
+                        }
+                    } catch (AccessDeniedException e) {
+                        throw e;
+                    } catch (Exception ignored) {}
                 } else if (user.getRole() == Role.ROLE_RECRUITER) {
                     recruiterAuthService.requireAuthorizedForApplication(principal, applicationId);
                 }
@@ -104,9 +114,9 @@ public class InterviewController {
             Principal principal
     ) {
         if (principal != null) {
-            var userOpt = userRepository.findByUsername(principal.getName());
+            var userOpt = userContextService.findByUsername(principal.getName());
             if (userOpt.isPresent()) {
-                PortalUser user = userOpt.get();
+                PortalUserDto user = userOpt.get();
                 if (user.getRole() == Role.ROLE_STUDENT) {
                     if (user.getReferenceId() == null || !user.getReferenceId().equalsIgnoreCase(studentId)) {
                         throw new AccessDeniedException("Access denied: Students may only access their own interview evaluations.");
@@ -118,7 +128,7 @@ public class InterviewController {
         }
         List<InterviewDto> ivs = interviewService.getInterviewsByStudent(studentId);
         if (principal != null) {
-            var userOpt = userRepository.findByUsername(principal.getName());
+            var userOpt = userContextService.findByUsername(principal.getName());
             if (userOpt.isPresent() && userOpt.get().getRole() == Role.ROLE_RECRUITER) {
                 ivs = ivs.stream()
                         .filter(iv -> recruiterAuthService.isAuthorizedForApplication(principal, iv.getApplicationId()))
@@ -141,7 +151,7 @@ public class InterviewController {
     public ResponseEntity<ApiResponse<List<InterviewDto>>> getAllInterviews(Principal principal) {
         List<InterviewDto> list = interviewService.getAllInterviews();
         if (principal != null) {
-            var userOpt = userRepository.findByUsername(principal.getName());
+            var userOpt = userContextService.findByUsername(principal.getName());
             if (userOpt.isPresent() && userOpt.get().getRole() == Role.ROLE_RECRUITER) {
                 list = list.stream()
                         .filter(iv -> recruiterAuthService.isAuthorizedForApplication(principal, iv.getApplicationId()))

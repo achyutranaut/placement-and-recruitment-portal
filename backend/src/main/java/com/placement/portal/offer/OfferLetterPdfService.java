@@ -15,6 +15,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 
+import com.placement.portal.student.StudentDto;
+
 @Service
 public class OfferLetterPdfService {
 
@@ -22,6 +24,10 @@ public class OfferLetterPdfService {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd MMMM yyyy");
 
     public byte[] generateOfferLetterPdf(OfferDto offer, Student student) {
+        return generateOfferLetterPdf(offer, StudentDto.fromEntity(student));
+    }
+
+    public byte[] generateOfferLetterPdf(OfferDto offer, StudentDto student) {
         try (PDDocument document = new PDDocument()) {
             PDPage page = new PDPage(PDRectangle.A4);
             document.addPage(page);

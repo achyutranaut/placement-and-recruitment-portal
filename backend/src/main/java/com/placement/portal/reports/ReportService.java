@@ -19,7 +19,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-public class ReportService {
+@org.springframework.context.annotation.Profile({"oracle", "h2", "default", "!neo4j"})
+public class ReportService implements IReportService {
 
     private final ReportJdbcDao reportJdbcDao;
     private final StudentRepository studentRepository;

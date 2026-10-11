@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 @Repository
+@org.springframework.context.annotation.Profile({"oracle", "h2", "default", "!neo4j"})
 public class ReportJdbcDao {
 
     private static final Logger log = LoggerFactory.getLogger(ReportJdbcDao.class);

@@ -15,9 +15,9 @@ import java.util.List;
 @Tag(name = "Programs", description = "Training curriculum programs, registrations, and tracks")
 public class ProgramController {
 
-    private final ProgramService programService;
+    private final IProgramService programService;
 
-    public ProgramController(ProgramService programService) {
+    public ProgramController(IProgramService programService) {
         this.programService = programService;
     }
 

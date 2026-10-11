@@ -20,7 +20,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-public class PlacementDriveService {
+@org.springframework.context.annotation.Profile({"oracle", "h2", "default", "!neo4j"})
+public class PlacementDriveService implements IPlacementDriveService {
 
     private final PlacementDriveRepository driveRepository;
     private final JobCompanyRepository jobCompanyRepository;

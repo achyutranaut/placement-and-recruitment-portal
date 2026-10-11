@@ -15,9 +15,9 @@ import java.util.List;
 @Tag(name = "Reports", description = "Analytical placement statistics, company distributions, and metrics")
 public class ReportController {
 
-    private final ReportService reportService;
+    private final IReportService reportService;
 
-    public ReportController(ReportService reportService) {
+    public ReportController(IReportService reportService) {
         this.reportService = reportService;
     }
 

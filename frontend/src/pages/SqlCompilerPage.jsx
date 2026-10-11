@@ -384,8 +384,86 @@ END;
   },
 ];
 
+const CYPHER_SAMPLE_QUERIES = [
+  {
+    category: 'MATCH & Traversals',
+    title: 'High CGPA Students',
+    sql: `// Find students with CGPA >= 8.5 with their enrolled academic program
+MATCH (s:Student)-[:ENROLLED_IN]->(p:Program)
+WHERE s.cgpa >= 8.5
+RETURN s.studentId AS ID, s.name AS Name, s.cgpa AS CGPA, s.registrationNo AS RegNo, p.programName AS Program
+ORDER BY s.cgpa DESC;`,
+  },
+  {
+    category: 'MATCH & Traversals',
+    title: 'Active Placement Drives & Host Companies',
+    sql: `// Drives with hosting companies and eligible programs via graph relationships
+MATCH (c:Company)-[:HOSTS_DRIVE]->(d:Drive)-[:ELIGIBLE_FOR]->(p:Program)
+RETURN c.companyName AS Company, d.jobTitle AS Role, d.ctc AS Package_LPA, d.minCgpa AS MinCGPA, collect(p.programId) AS EligiblePrograms
+ORDER BY d.ctc DESC;`,
+  },
+  {
+    category: 'MATCH & Traversals',
+    title: 'Full Student Placement Journey (Multi-Hop)',
+    sql: `// End-to-end traversal: Student -> Application -> Drive -> Company -> Interview -> Offer
+MATCH (s:Student)-[:SUBMITTED_APPLICATION]->(a:Application)-[:FOR_DRIVE]->(d:Drive)<-[:HOSTS_DRIVE]-(c:Company)
+OPTIONAL MATCH (a)-[:HAS_INTERVIEW]->(iv:Interview)
+OPTIONAL MATCH (a)-[:RECEIVED_OFFER]->(o:Offer)
+RETURN s.name AS Candidate, c.companyName AS Company, d.jobTitle AS Role, a.status AS AppStatus, iv.roundNo AS Round, iv.result AS Result, o.ctcLpa AS Offer_LPA;`,
+  },
+  {
+    category: 'Aggregations & Analytics',
+    title: 'Recruitment Funnel & Placement Rate by Program',
+    sql: `// Graph analytics: Applications, cleared interviews, and offers grouped by program
+MATCH (p:Program)<-[:ENROLLED_IN]-(s:Student)
+OPTIONAL MATCH (s)-[:SUBMITTED_APPLICATION]->(a:Application)
+OPTIONAL MATCH (a)-[:RECEIVED_OFFER]->(o:Offer)
+RETURN p.programName AS Program,
+       count(DISTINCT s) AS TotalStudents,
+       count(DISTINCT a) AS ApplicationsCount,
+       count(DISTINCT o) AS PlacedOffers,
+       round(avg(o.ctcLpa) * 100.0) / 100.0 AS Average_CTC;`,
+  },
+  {
+    category: 'Aggregations & Analytics',
+    title: 'Interviewer Workload & Clearance Ratio',
+    sql: `// Evaluates interview volume and clearance ratios per interviewer across rounds
+MATCH (iv:Interview)-[:CONDUCTED_BY]->(ir:Interviewer)
+RETURN ir.interviewerName AS Interviewer,
+       iv.roundNo AS RoundNo,
+       count(iv) AS InterviewsConducted,
+       count(CASE WHEN iv.result = 'CLEARED' THEN 1 END) AS ClearedCount,
+       count(CASE WHEN iv.result = 'REJECTED' THEN 1 END) AS RejectedCount
+ORDER BY InterviewsConducted DESC;`,
+  },
+  {
+    category: 'Graph Recommendations',
+    title: 'Similar Placed Peer Recommendation',
+    sql: `// Recommend companies based on peers placed from the same program with similar CGPA
+MATCH (s:Student {studentId: 'STU023'})-[:ENROLLED_IN]->(p:Program)<-[:ENROLLED_IN]-(peer:Student)
+WHERE peer.studentId <> s.studentId AND peer.placementStatus = 'PLACED'
+MATCH (peer)-[:SUBMITTED_APPLICATION]->(:Application)-[:FOR_DRIVE]->(d:Drive)<-[:HOSTS_DRIVE]-(c:Company)
+MATCH (peer)-[:SUBMITTED_APPLICATION]->(:Application)-[:RECEIVED_OFFER]->(o:Offer)
+RETURN peer.name AS PlacedPeer, peer.cgpa AS PeerCGPA, c.companyName AS Company, d.jobTitle AS Role, o.ctcLpa AS CTC_LPA;`,
+  },
+  {
+    category: 'Schema & Meta',
+    title: 'Database Schema Visualization Call',
+    sql: `// Inspect graph node labels and relationship types
+CALL db.labels() YIELD label
+RETURN label;`,
+  },
+  {
+    category: 'Schema & Meta',
+    title: 'Active Constraints & Indexes',
+    sql: `// Inspect Neo4j uniqueness constraints and range indexes
+SHOW CONSTRAINTS;`,
+  },
+];
+
 export default function SqlCompilerPage() {
-  const [sql, setSql] = useState('SELECT * FROM STUDENT;');
+  const [backendInfo, setBackendInfo] = useState(null);
+  const [sql, setSql] = useState('MATCH (s:Student) RETURN s.studentId, s.name, s.cgpa LIMIT 10;');
   const [mode, setMode] = useState('QUERY');
   const [strictMode, setStrictMode] = useState(true);
   const [executing, setExecuting] = useState(false);
@@ -414,17 +492,28 @@ export default function SqlCompilerPage() {
 
   // Load connection info, schema metadata, and audit history on mount
   useEffect(() => {
-    loadConnectionInfo();
+    loadBackendAndConnectionInfo();
     loadSchema();
     loadOracleHistory();
   }, []);
 
-  const loadConnectionInfo = async () => {
+  const loadBackendAndConnectionInfo = async () => {
     try {
-      const data = await api.getSqlConnectionInfo();
-      setConnInfo(data);
+      const [backendData, connData] = await Promise.allSettled([
+        api.getBackendInfo(),
+        api.getSqlConnectionInfo()
+      ]);
+      if (backendData.status === 'fulfilled' && backendData.value) {
+        setBackendInfo(backendData.value);
+        if (backendData.value.activeBackend === 'oracle') {
+          setSql('SELECT * FROM STUDENT;');
+        }
+      }
+      if (connData.status === 'fulfilled') {
+        setConnInfo(connData.value);
+      }
     } catch (err) {
-      console.error('Failed to load connection info:', err);
+      console.error('Failed to load backend/connection info:', err);
     }
   };
 
@@ -706,31 +795,36 @@ export default function SqlCompilerPage() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                Oracle SQL & PL/SQL Compiler
+                {backendInfo?.activeBackend === 'neo4j' ? 'Neo4j Cypher Graph Compiler & Console' : 'Oracle SQL & PL/SQL Compiler'}
                 <span className="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-mono font-semibold border border-emerald-200">
-                  DA2 Environment
+                  {backendInfo?.activeBackend === 'neo4j' ? 'Graph Backend Active' : 'DA2 Environment'}
                 </span>
               </h1>
               <p className="text-xs text-slate-500 font-medium">
-                Authoritative query & procedural code execution engine operating on real local Oracle Database instance
+                {backendInfo?.activeBackend === 'neo4j'
+                  ? 'Interactive declarative Cypher console executing graph traversals, schema introspection, and graph analytics'
+                  : 'Authoritative query & procedural code execution engine operating on real local Oracle Database instance'}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Live Oracle Connection Status Badge */}
+        {/* Live Database Connection Status Badge */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-white border-slate-200 shadow-sm text-xs">
             <Radio className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
             <div>
               <div className="font-bold text-slate-800 flex items-center gap-1.5">
-                <span>Oracle Database 23c Free</span>
+                <span>{backendInfo?.activeBackend === 'neo4j' ? 'Neo4j Graph Database 5.x' : 'Oracle Database 23c Free'}</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                 <span className="text-[10px] text-emerald-700 font-semibold uppercase">Connected</span>
               </div>
               <div className="text-[11px] text-slate-500 font-mono">
-                Schema: <strong className="text-slate-700">{connInfo?.user || 'C##PLACEMENT_ADMIN'}</strong> •{' '}
-                {connInfo?.host || 'localhost'}:{connInfo?.port || 1521}/{connInfo?.serviceName || 'FREEPDB1'}
+                {backendInfo?.activeBackend === 'neo4j' ? (
+                  <>Database: <strong className="text-slate-700">neo4j</strong> • bolt://localhost:7687</>
+                ) : (
+                  <>Schema: <strong className="text-slate-700">{connInfo?.user || 'C##PLACEMENT_ADMIN'}</strong> • {connInfo?.host || 'localhost'}:{connInfo?.port || 1521}/{connInfo?.serviceName || 'FREEPDB1'}</>
+                )}
               </div>
             </div>
           </div>
@@ -1046,9 +1140,11 @@ export default function SqlCompilerPage() {
           {sidebarView === 'samples' && (
             <div className="flex-1 p-3 space-y-2 overflow-y-auto max-h-[580px]">
               <div className="text-[11px] text-slate-500 font-medium px-1 pb-1">
-                Click any standard DBMS DA2 query or PL/SQL snippet to load it into the editor:
+                {backendInfo?.activeBackend === 'neo4j'
+                  ? 'Click any representative Cypher graph query to populate the editor:'
+                  : 'Click any standard DBMS DA2 query or PL/SQL snippet to load it into the editor:'}
               </div>
-              {SAMPLE_QUERIES.map((s, idx) => (
+              {(backendInfo?.activeBackend === 'neo4j' ? CYPHER_SAMPLE_QUERIES : SAMPLE_QUERIES).map((s, idx) => (
                 <div
                   key={idx}
                   onClick={() => handleLoadSample(s.sql)}
