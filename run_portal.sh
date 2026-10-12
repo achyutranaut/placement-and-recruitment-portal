@@ -108,15 +108,15 @@ else
     fi
 fi
 
-# Clean up any lingering processes on ports 8080 or 3000 from previous runs
+# Clean up any lingering processes on ports 8080 or 3001 from previous runs
 if lsof -ti :8080 >/dev/null 2>&1; then
     echo "[*] Freeing port 8080 from previous backend instance..."
     lsof -ti :8080 | xargs kill -9 2>/dev/null || true
     sleep 1
 fi
-if lsof -ti :3000 >/dev/null 2>&1; then
-    echo "[*] Freeing port 3000 from previous frontend instance..."
-    lsof -ti :3000 | xargs kill -9 2>/dev/null || true
+if lsof -ti :3001 >/dev/null 2>&1; then
+    echo "[*] Freeing port 3001 from previous frontend instance..."
+    lsof -ti :3001 | xargs kill -9 2>/dev/null || true
     sleep 1
 fi
 
@@ -125,7 +125,7 @@ cleanup() {
     echo "[*] Shutting down portal services..."
     kill $BACKEND_PID $FRONTEND_PID 2>/dev/null || true
     lsof -ti :8080 | xargs kill -9 2>/dev/null || true
-    lsof -ti :3000 | xargs kill -9 2>/dev/null || true
+    lsof -ti :3001 | xargs kill -9 2>/dev/null || true
     exit 0
 }
 trap cleanup EXIT INT TERM
@@ -135,21 +135,21 @@ echo "[1/2] Launching Spring Boot Backend (:8080) [Profile: $DB_PROFILE]..."
 (cd "$DIR/backend" && mvn spring-boot:run -Dspring-boot.run.profiles=$DB_PROFILE) &
 BACKEND_PID=$!
 
-echo "[2/2] Launching React Vite Frontend (:3000)..."
+echo "[2/2] Launching React Vite Frontend (:3001)..."
 (cd "$DIR/frontend" && npm run dev) &
 FRONTEND_PID=$!
 
 echo ""
 echo "================================================================="
 echo "   PORTAL READY FOR EVALUATION & DEMONSTRATION"
-echo "   - Landing Page:           http://localhost:3000"
-echo "   - Student Portal:         http://localhost:3000/student"
-echo "   - Resume Vault (BLOB):    http://localhost:3000/student/resume"
-echo "   - Campus Drives:          http://localhost:3000/student/drives"
-echo "   - Applications Tracker:   http://localhost:3000/student/applications"
-echo "   - Recruiter Portal (ATS): http://localhost:3000/recruiter"
-echo "   - Recruiter Registration: http://localhost:3000/recruiter/register"
-echo "   - Placement Admin/DB:     http://localhost:3000/admin"
+echo "   - Landing Page:           http://localhost:3001"
+echo "   - Student Portal:         http://localhost:3001/student"
+echo "   - Resume Vault (BLOB):    http://localhost:3001/student/resume"
+echo "   - Campus Drives:          http://localhost:3001/student/drives"
+echo "   - Applications Tracker:   http://localhost:3001/student/applications"
+echo "   - Recruiter Portal (ATS): http://localhost:3001/recruiter"
+echo "   - Recruiter Registration: http://localhost:3001/recruiter/register"
+echo "   - Placement Admin/DB:     http://localhost:3001/admin"
 echo "   - Swagger UI API Docs:    http://localhost:8080/swagger-ui.html"
 echo "================================================================="
 echo "   Demo Personas:"
