@@ -54,8 +54,8 @@ export default function StudentResumePage() {
       ]);
       setResumes(allResumes || []);
       setCurrentResume(activeResume);
-      if (activeResume && !previewResumeId) {
-        setPreviewResumeId(activeResume.resumeId);
+      if (activeResume) {
+        setPreviewResumeId((prev) => (prev ? prev : activeResume.resumeId));
       }
     } catch (err) {
       console.error('Failed to load resumes:', err);
@@ -146,6 +146,7 @@ export default function StudentResumePage() {
     setActivatingId(resume.resumeId);
     try {
       await api.activateResume(resume.resumeId);
+      setPreviewResumeId(resume.resumeId);
       setNotification({
         type: 'success',
         message: `Resume ${resume.fileName} (Version ${resume.versionNo}) is now active.`,
