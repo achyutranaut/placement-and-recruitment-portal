@@ -36,11 +36,11 @@ public class Neo4jDataSeeder implements CommandLineRunner {
         log.info("Checking Neo4j dataset initialization status...");
 
         try (Session session = driver.session()) {
-            var res = session.run("MATCH (n:Student) RETURN count(n) AS cnt");
-            long studentCount = res.hasNext() ? res.next().get("cnt").asLong() : 0;
+            var res = session.run("MATCH (n:Program) RETURN count(n) AS cnt");
+            long programCount = res.hasNext() ? res.next().get("cnt").asLong() : 0;
 
-            if (studentCount > 0) {
-                log.info("Neo4j database already contains {} student node(s). Skipping initial seed migration.", studentCount);
+            if (programCount > 0) {
+                log.info("Neo4j database already initialized ({} program nodes found). Skipping initial seed migration.", programCount);
                 printReconciliationReport(session);
                 return;
             }

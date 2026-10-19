@@ -12,4 +12,7 @@ public interface Neo4jAuditEventRepository extends Neo4jRepository<AuditEventNod
 
     @Query("MATCH (ev:AuditEvent {applicationId: $applicationId}) RETURN ev ORDER BY ev.changedAt DESC")
     List<AuditEventNode> findByApplicationId(String applicationId);
+
+    @Query("MATCH (ev:AuditEvent) RETURN ev ORDER BY ev.changedAt DESC")
+    List<AuditEventNode> findAllByOrderByChangedAtDesc();
 }

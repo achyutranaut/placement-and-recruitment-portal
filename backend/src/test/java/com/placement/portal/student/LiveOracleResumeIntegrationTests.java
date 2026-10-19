@@ -130,4 +130,92 @@ public class LiveOracleResumeIntegrationTests {
         assertTrue(remaining.stream().anyMatch(r -> r.getResumeId().equalsIgnoreCase(olderResume.getResumeId()) && "Y".equals(r.getIsCurrent())),
                 "Active resume must remain intact and functional");
     }
+
+    @Test
+    @DisplayName("Live Oracle DB: Full Set-Active workflow across multiple resume versions, BLOB download, and consistency invariants")
+    @WithMockUser(username = STUDENT_USERNAME, roles = {"STUDENT"})
+    void testLiveOracleSetActiveWorkflowAllCases() throws Exception {
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+
+        // Remember original active resume for STU023 to restore after test
+        List<StudentResume> initialResumes = resumeRepository.findByStudentIdOrderByVersionNoDesc(STUDENT_ID);
+        assertFalse(initialResumes.isEmpty(), "STU023 must have existing resumes in Oracle");
+        String originalActiveId = initialResumes.stream()
+                .filter(r -> "Y".equalsIgnoreCase(r.getIsCurrent()))
+                .map(StudentResume::getResumeId)
+                .findFirst()
+                .orElse(initialResumes.get(0).getResumeId());
+
+        // Upload two temporary versions (tempA and tempB) with distinct BLOB payloads
+        byte[] payloadA = "%PDF-1.4 ORACLE_BLOB_PAYLOAD_TEMP_VERSION_A".getBytes(StandardCharsets.UTF_8);
+        byte[] payloadB = "%PDF-1.4 ORACLE_BLOB_PAYLOAD_TEMP_VERSION_B".getBytes(StandardCharsets.UTF_8);
+
+        String respA = mockMvc.perform(multipart("/api/v1/resumes/upload")
+                        .file(new MockMultipartFile("file", "oracle_temp_a.pdf", "application/pdf", payloadA)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String idA = mapper.readTree(respA).path("data").path("resumeId").asText();
+
+        String respB = mockMvc.perform(multipart("/api/v1/resumes/upload")
+                        .file(new MockMultipartFile("file", "oracle_temp_b.pdf", "application/pdf", payloadB)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String idB = mapper.readTree(respB).path("data").path("resumeId").asText();
+
+        try {
+            // Currently idB is active ('Y') and idA is inactive ('N')
+            assertEquals("Y", resumeRepository.findById(idB).orElseThrow().getIsCurrent());
+            assertEquals("N", resumeRepository.findById(idA).orElseThrow().getIsCurrent());
+            assertEquals(1L, resumeRepository.countByStudentIdAndIsCurrent(STUDENT_ID, "Y"));
+
+            // Activate idA -> idA becomes 'Y', idB and all others become 'N'
+            mockMvc.perform(put("/api/v1/resumes/" + idA + "/activate"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.resumeId").value(idA))
+                    .andExpect(jsonPath("$.data.isCurrent").value("Y"))
+                    .andExpect(jsonPath("$.data.isActive").value("Y"))
+                    .andExpect(jsonPath("$.data.active").value(true));
+
+            assertEquals("Y", resumeRepository.findById(idA).orElseThrow().getIsCurrent());
+            assertEquals("N", resumeRepository.findById(idB).orElseThrow().getIsCurrent());
+            assertEquals(1L, resumeRepository.countByStudentIdAndIsCurrent(STUDENT_ID, "Y"));
+
+            // Verify fresh read of /student/{studentId}/current returns idA
+            mockMvc.perform(get("/api/v1/resumes/student/" + STUDENT_ID + "/current"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.resumeId").value(idA))
+                    .andExpect(jsonPath("$.data.isCurrent").value("Y"));
+
+            // Verify downloading current active resume returns payloadA bytes
+            byte[] downloadedA = mockMvc.perform(get("/api/v1/resumes/student/" + STUDENT_ID + "/current/download"))
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsByteArray();
+            assertArrayEquals(payloadA, downloadedA, "Oracle BLOB stream for active resume must match idA");
+
+            // Now activate idB -> idB becomes 'Y', idA becomes 'N'
+            mockMvc.perform(put("/api/v1/resumes/" + idB + "/activate"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.resumeId").value(idB))
+                    .andExpect(jsonPath("$.data.isCurrent").value("Y"));
+
+            byte[] downloadedB = mockMvc.perform(get("/api/v1/resumes/student/" + STUDENT_ID + "/current/download"))
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsByteArray();
+            assertArrayEquals(payloadB, downloadedB, "Oracle BLOB stream for active resume must match idB");
+
+            // Non-existent resume activation -> 404 Not Found and idB remains active
+            mockMvc.perform(put("/api/v1/resumes/RES_ORACLE_DOES_NOT_EXIST/activate"))
+                    .andExpect(status().isNotFound());
+            assertEquals("Y", resumeRepository.findById(idB).orElseThrow().getIsCurrent());
+            assertEquals(1L, resumeRepository.countByStudentIdAndIsCurrent(STUDENT_ID, "Y"));
+        } finally {
+            // Restore originalActiveId as active and clean up temporary resumes idA and idB
+            mockMvc.perform(put("/api/v1/resumes/" + originalActiveId + "/activate"))
+                    .andExpect(status().isOk());
+            mockMvc.perform(delete("/api/v1/resumes/" + idA)).andExpect(status().isOk());
+            mockMvc.perform(delete("/api/v1/resumes/" + idB)).andExpect(status().isOk());
+        }
+    }
 }
+

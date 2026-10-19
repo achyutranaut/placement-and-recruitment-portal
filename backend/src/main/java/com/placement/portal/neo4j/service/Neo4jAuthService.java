@@ -61,9 +61,19 @@ public class Neo4jAuthService implements IAuthService {
                     .findFirst();
         }
 
-        // Check if student logged in using VIT student email or registration number
+        // Direct referenceId lookup (e.g. STU023, STU002, ADMIN01, COM004)
         if (userOpt.isEmpty()) {
-            var stuOpt = studentRepository.findByEmail(identifier.toLowerCase());
+            userOpt = userRepository.findAll().stream()
+                    .filter(u -> u.getReferenceId() != null && identifier.equalsIgnoreCase(u.getReferenceId()))
+                    .findFirst();
+        }
+
+        // Check if student logged in using studentId, VIT student email, or registration number
+        if (userOpt.isEmpty()) {
+            var stuOpt = studentRepository.findByStudentId(identifier.toUpperCase());
+            if (stuOpt.isEmpty()) {
+                stuOpt = studentRepository.findByEmail(identifier.toLowerCase());
+            }
             if (stuOpt.isEmpty()) {
                 stuOpt = studentRepository.findByRegistrationNo(identifier.toUpperCase());
             }
@@ -78,7 +88,8 @@ public class Neo4jAuthService implements IAuthService {
         // Check if user logged in using account email or full name
         if (userOpt.isEmpty()) {
             userOpt = userRepository.findAll().stream()
-                    .filter(u -> identifier.equalsIgnoreCase(u.getEmail()) || identifier.equalsIgnoreCase(u.getFullName()))
+                    .filter(u -> (u.getEmail() != null && identifier.equalsIgnoreCase(u.getEmail()))
+                            || (u.getFullName() != null && identifier.equalsIgnoreCase(u.getFullName())))
                     .findFirst();
         }
 

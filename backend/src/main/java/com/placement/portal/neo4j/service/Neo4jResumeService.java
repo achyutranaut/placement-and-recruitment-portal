@@ -202,19 +202,34 @@ public class Neo4jResumeService implements IResumeService {
     @Override
     @Transactional
     public ResumeDto activateResume(String authenticatedStudentId, String resumeId, boolean isAdmin) {
-        ResumeNode target = resumeRepository.findByResumeId(resumeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Resume not found with ID: " + resumeId));
+        if (resumeId == null || resumeId.isBlank()) {
+            throw new IllegalArgumentException("Resume ID is required for activation.");
+        }
+        String normalizedResumeId = resumeId.trim();
+        ResumeNode target = resumeRepository.findByResumeId(normalizedResumeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Resume not found with ID: " + normalizedResumeId));
 
-        if (!isAdmin && (authenticatedStudentId == null || !target.getStudentId().equalsIgnoreCase(authenticatedStudentId))) {
+        if (!isAdmin && (authenticatedStudentId == null || authenticatedStudentId.isBlank()
+                || !target.getStudentId().equalsIgnoreCase(authenticatedStudentId.trim()))) {
             throw new AccessDeniedException("Access denied: You may only activate your own resume records.");
         }
 
         List<ResumeNode> allResumes = resumeRepository.findByStudentIdOrderByVersionNoDesc(target.getStudentId());
+        ResumeNode activatedNode = null;
         for (ResumeNode r : allResumes) {
-            r.setIsCurrent(r.getResumeId().equalsIgnoreCase(resumeId) ? "Y" : "N");
+            if (r.getResumeId().equalsIgnoreCase(normalizedResumeId)) {
+                r.setIsCurrent("Y");
+                activatedNode = r;
+            } else {
+                r.setIsCurrent("N");
+            }
         }
         resumeRepository.saveAll(allResumes);
-        return toDto(target);
+        if (activatedNode == null) {
+            target.setIsCurrent("Y");
+            activatedNode = resumeRepository.save(target);
+        }
+        return toDto(activatedNode);
     }
 
     private ResumeDto toDto(ResumeNode n) {

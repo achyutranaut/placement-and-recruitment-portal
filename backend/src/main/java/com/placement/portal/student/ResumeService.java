@@ -31,36 +31,31 @@ public class ResumeService implements IResumeService {
 
     @Transactional
     public ResumeDto uploadResume(String studentId, MultipartFile file) throws IOException {
-        if (!studentRepository.existsById(studentId)) {
+        if (studentId == null || studentId.isBlank() || !studentRepository.existsById(studentId.trim())) {
             throw new IllegalArgumentException("Authenticated student record not found: " + studentId);
         }
+        String normalizedStudentId = studentId.trim();
 
-        if (file.isEmpty()) {
+        if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("Uploaded file cannot be empty");
         }
 
         // Get latest version number
         int nextVersion = 1;
-        var latestOpt = resumeRepository.findTopByStudentIdOrderByVersionNoDesc(studentId);
+        var latestOpt = resumeRepository.findTopByStudentIdOrderByVersionNoDesc(normalizedStudentId);
         if (latestOpt.isPresent()) {
             nextVersion = latestOpt.get().getVersionNo() + 1;
         }
 
-        // Mark previous current resumes as non-current
-        List<StudentResume> previousResumes = resumeRepository.findAllByStudentIdAndIsCurrent(studentId, "Y");
-        for (StudentResume prev : previousResumes) {
-            prev.setIsCurrent("N");
-        }
-        if (!previousResumes.isEmpty()) {
-            resumeRepository.saveAll(previousResumes);
-        }
+        // Atomically mark all previous resumes for this student as inactive ('N') without rewriting BLOBs
+        resumeRepository.deactivateAllForStudent(normalizedStudentId);
 
         String resumeId = "RES_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         String contentType = file.getContentType() != null ? file.getContentType() : "application/pdf";
 
         StudentResume resume = new StudentResume(
                 resumeId,
-                studentId,
+                normalizedStudentId,
                 file.getOriginalFilename() != null ? file.getOriginalFilename() : "resume.pdf",
                 contentType,
                 file.getSize(),
@@ -69,54 +64,73 @@ public class ResumeService implements IResumeService {
                 "Y"
         );
 
-        StudentResume saved = resumeRepository.save(resume);
+        StudentResume saved = resumeRepository.saveAndFlush(resume);
         return ResumeDto.fromEntity(saved);
     }
 
+    @Transactional(readOnly = true)
     public List<ResumeDto> getResumesByStudent(String studentId) {
-        return resumeRepository.findByStudentIdOrderByVersionNoDesc(studentId).stream()
+        if (studentId == null || studentId.isBlank()) {
+            return List.of();
+        }
+        return resumeRepository.findByStudentIdOrderByVersionNoDesc(studentId.trim()).stream()
                 .map(ResumeDto::fromEntity)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public ResumeDto getCurrentResume(String studentId) {
-        return resumeRepository.findFirstByStudentIdAndIsCurrentOrderByVersionNoDesc(studentId, "Y")
+        if (studentId == null || studentId.isBlank()) {
+            return null;
+        }
+        return resumeRepository.findFirstByStudentIdAndIsCurrentOrderByVersionNoDesc(studentId.trim(), "Y")
                 .map(ResumeDto::fromEntity)
                 .orElse(null);
     }
 
+    @Transactional(readOnly = true)
     public StudentResume getResumeEntity(String resumeId) {
-        return resumeRepository.findById(resumeId)
+        if (resumeId == null || resumeId.isBlank()) {
+            throw new IllegalArgumentException("Resume ID cannot be empty.");
+        }
+        return resumeRepository.findById(resumeId.trim())
                 .orElseThrow(() -> new ResourceNotFoundException("Resume not found with ID: " + resumeId));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public byte[] getResumeBytes(String resumeId) {
         return getResumeEntity(resumeId).getResumeData();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public String getResumeContentType(String resumeId) {
         return getResumeEntity(resumeId).getContentType();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public String getResumeFileName(String resumeId) {
         return getResumeEntity(resumeId).getFileName();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ResumeDto getResumeById(String resumeId) {
         return ResumeDto.fromEntity(getResumeEntity(resumeId));
     }
 
     @Transactional
     public ResumeDto deleteResume(String authenticatedStudentId, String resumeId, boolean isAdmin) {
-        StudentResume resume = resumeRepository.findById(resumeId)
+        if (resumeId == null || resumeId.isBlank()) {
+            throw new IllegalArgumentException("Resume ID is required.");
+        }
+        StudentResume resume = resumeRepository.findById(resumeId.trim())
                 .orElseThrow(() -> new ResourceNotFoundException("Resume not found with ID: " + resumeId));
 
         // Enforce ownership: reject attempts to delete another student's resume with 403
-        if (!isAdmin && (authenticatedStudentId == null || !resume.getStudentId().equalsIgnoreCase(authenticatedStudentId))) {
+        if (!isAdmin && (authenticatedStudentId == null || !resume.getStudentId().equalsIgnoreCase(authenticatedStudentId.trim()))) {
             throw new AccessDeniedException("Access denied: You may only delete your own resume records.");
         }
 
@@ -137,7 +151,7 @@ public class ResumeService implements IResumeService {
 
         // Cascade any referencing evaluation records
         try {
-            evaluationRepository.deleteByResumeId(resumeId);
+            evaluationRepository.deleteByResumeId(resume.getResumeId());
         } catch (Exception ignored) {}
 
         ResumeDto deletedDto = ResumeDto.fromEntity(resume);
@@ -148,22 +162,43 @@ public class ResumeService implements IResumeService {
 
     @Transactional
     public ResumeDto activateResume(String authenticatedStudentId, String resumeId, boolean isAdmin) {
-        StudentResume targetResume = resumeRepository.findById(resumeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Resume not found with ID: " + resumeId));
+        if (resumeId == null || resumeId.isBlank()) {
+            throw new IllegalArgumentException("Resume ID is required for activation.");
+        }
+        String normalizedResumeId = resumeId.trim();
 
-        if (!isAdmin && (authenticatedStudentId == null || !targetResume.getStudentId().equalsIgnoreCase(authenticatedStudentId))) {
+        StudentResume targetResume = resumeRepository.findById(normalizedResumeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Resume not found with ID: " + normalizedResumeId));
+
+        String targetStudentId = targetResume.getStudentId();
+        if (!isAdmin && (authenticatedStudentId == null || authenticatedStudentId.isBlank()
+                || !targetStudentId.equalsIgnoreCase(authenticatedStudentId.trim()))) {
             throw new AccessDeniedException("Access denied: You may only activate your own resume records.");
         }
 
-        List<StudentResume> allResumes = resumeRepository.findByStudentIdOrderByVersionNoDesc(targetResume.getStudentId());
-        for (StudentResume r : allResumes) {
-            if (r.getResumeId().equalsIgnoreCase(resumeId)) {
-                r.setIsCurrent("Y");
-            } else {
-                r.setIsCurrent("N");
-            }
+        // Step 1: Mark all resume versions for this student as inactive ('N') in Oracle
+        resumeRepository.deactivateAllForStudent(targetStudentId);
+
+        // Step 2: Mark the exact selected resume version as active ('Y') in the same transaction
+        int activatedRows = resumeRepository.activateResumeForStudent(targetStudentId, targetResume.getResumeId());
+        if (activatedRows != 1) {
+            throw new IllegalStateException(
+                    "Resume activation failed: expected 1 updated row for resume " + targetResume.getResumeId() + ", but updated " + activatedRows
+            );
         }
-        resumeRepository.saveAll(allResumes);
-        return ResumeDto.fromEntity(targetResume);
+
+        // Step 3: Verify invariant — exactly one resume version is active for this student
+        long activeCount = resumeRepository.countByStudentIdAndIsCurrent(targetStudentId, "Y");
+        if (activeCount != 1) {
+            throw new IllegalStateException(
+                    "Database consistency check failed: expected exactly 1 active resume for student " + targetStudentId + ", but found " + activeCount
+            );
+        }
+
+        // Step 4: Return the authoritative active resume re-read from the database
+        StudentResume refreshed = resumeRepository.findById(targetResume.getResumeId())
+                .orElseThrow(() -> new IllegalStateException("Activated resume not found after update: " + targetResume.getResumeId()));
+        return ResumeDto.fromEntity(refreshed);
     }
 }
+

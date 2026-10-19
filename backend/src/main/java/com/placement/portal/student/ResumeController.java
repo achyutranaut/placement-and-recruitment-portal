@@ -149,16 +149,24 @@ public class ResumeController {
     @PreAuthorize("hasAnyRole('STUDENT', 'RECRUITER', 'ADMIN')")
     @Operation(summary = "Get all resume versions for a student")
     public ResponseEntity<ApiResponse<List<ResumeDto>>> getResumesByStudent(@PathVariable String studentId, Principal principal) {
-        validateStudentAccess(studentId, principal);
-        return ResponseEntity.ok(ApiResponse.ok(resumeService.getResumesByStudent(studentId)));
+        String sanitizedStudentId = sanitizeParam(studentId);
+        if (sanitizedStudentId == null) {
+            throw new IllegalArgumentException("Student ID is required.");
+        }
+        validateStudentAccess(sanitizedStudentId, principal);
+        return ResponseEntity.ok(ApiResponse.ok(resumeService.getResumesByStudent(sanitizedStudentId)));
     }
 
     @GetMapping("/student/{studentId}/current")
     @PreAuthorize("hasAnyRole('STUDENT', 'RECRUITER', 'ADMIN')")
     @Operation(summary = "Get current active resume for student")
     public ResponseEntity<ApiResponse<ResumeDto>> getCurrentResume(@PathVariable String studentId, Principal principal) {
-        validateStudentAccess(studentId, principal);
-        ResumeDto current = resumeService.getCurrentResume(studentId);
+        String sanitizedStudentId = sanitizeParam(studentId);
+        if (sanitizedStudentId == null) {
+            throw new IllegalArgumentException("Student ID is required.");
+        }
+        validateStudentAccess(sanitizedStudentId, principal);
+        ResumeDto current = resumeService.getCurrentResume(sanitizedStudentId);
         return ResponseEntity.ok(ApiResponse.ok(current));
     }
 
@@ -166,7 +174,11 @@ public class ResumeController {
     @PreAuthorize("hasAnyRole('STUDENT', 'RECRUITER', 'ADMIN')")
     @Operation(summary = "Get resume metadata by ID")
     public ResponseEntity<ApiResponse<ResumeDto>> getResumeById(@PathVariable String resumeId, Principal principal) {
-        ResumeDto dto = resumeService.getResumeById(resumeId);
+        String sanitizedResumeId = sanitizeParam(resumeId);
+        if (sanitizedResumeId == null) {
+            throw new IllegalArgumentException("Resume ID is required.");
+        }
+        ResumeDto dto = resumeService.getResumeById(sanitizedResumeId);
         if (dto != null) {
             validateStudentAccess(dto.getStudentId(), principal);
         }
@@ -177,21 +189,31 @@ public class ResumeController {
     @PreAuthorize("hasAnyRole('STUDENT', 'RECRUITER', 'ADMIN')")
     @Operation(summary = "Stream/Download resume binary BLOB")
     public ResponseEntity<byte[]> downloadResume(@PathVariable String resumeId, Principal principal) {
-        ResumeDto resume = resumeService.getResumeById(resumeId);
+        String sanitizedResumeId = sanitizeParam(resumeId);
+        if (sanitizedResumeId == null) {
+            throw new IllegalArgumentException("Resume ID is required.");
+        }
+        ResumeDto resume = resumeService.getResumeById(sanitizedResumeId);
         validateStudentAccess(resume.getStudentId(), principal);
 
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(resumeService.getResumeContentType(resumeId)))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resumeService.getResumeFileName(resumeId) + "\"")
-                .body(resumeService.getResumeBytes(resumeId));
+                .contentType(MediaType.parseMediaType(resumeService.getResumeContentType(sanitizedResumeId)))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resumeService.getResumeFileName(sanitizedResumeId) + "\"")
+                .header(HttpHeaders.CACHE_CONTROL, "no-store, no-cache, must-revalidate, max-age=0")
+                .header(HttpHeaders.PRAGMA, "no-cache")
+                .body(resumeService.getResumeBytes(sanitizedResumeId));
     }
 
     @GetMapping("/student/{studentId}/current/download")
     @PreAuthorize("hasAnyRole('STUDENT', 'RECRUITER', 'ADMIN')")
     @Operation(summary = "Stream/Download current active resume for student")
     public ResponseEntity<byte[]> downloadCurrentResume(@PathVariable String studentId, Principal principal) {
-        validateStudentAccess(studentId, principal);
-        ResumeDto current = resumeService.getCurrentResume(studentId);
+        String sanitizedStudentId = sanitizeParam(studentId);
+        if (sanitizedStudentId == null) {
+            throw new IllegalArgumentException("Student ID is required.");
+        }
+        validateStudentAccess(sanitizedStudentId, principal);
+        ResumeDto current = resumeService.getCurrentResume(sanitizedStudentId);
         if (current == null) {
             return ResponseEntity.notFound().build();
         }
@@ -205,6 +227,11 @@ public class ResumeController {
             @PathVariable String resumeId,
             Principal principal) {
 
+        String sanitizedResumeId = sanitizeParam(resumeId);
+        if (sanitizedResumeId == null) {
+            throw new IllegalArgumentException("Resume ID is required.");
+        }
+
         if (principal == null) {
             throw new org.springframework.security.access.AccessDeniedException("Authentication required.");
         }
@@ -216,8 +243,11 @@ public class ResumeController {
 
         var user = userOpt.get();
         boolean isAdmin = user.getRole() == com.placement.portal.auth.Role.ROLE_ADMIN;
-        String authenticatedStudentId = null;
+        if (!isAdmin && user.getRole() != com.placement.portal.auth.Role.ROLE_STUDENT) {
+            throw new org.springframework.security.access.AccessDeniedException("Access denied: Only the owning student or an administrator may delete a resume.");
+        }
 
+        String authenticatedStudentId = null;
         if (user.getRole() == com.placement.portal.auth.Role.ROLE_STUDENT) {
             authenticatedStudentId = user.getReferenceId();
             if (authenticatedStudentId == null || authenticatedStudentId.isBlank()) {
@@ -225,19 +255,24 @@ public class ResumeController {
             }
         }
 
-        ResumeDto deleted = resumeService.deleteResume(authenticatedStudentId, resumeId, isAdmin);
+        ResumeDto deleted = resumeService.deleteResume(authenticatedStudentId, sanitizedResumeId, isAdmin);
         return ResponseEntity.ok(ApiResponse.ok(
                 "Resume version " + deleted.getVersionNo() + " (" + deleted.getFileName() + ") permanently deleted.",
                 deleted
         ));
     }
 
-    @PutMapping("/{resumeId}/activate")
+    @RequestMapping(value = "/{resumeId}/activate", method = {RequestMethod.PUT, RequestMethod.POST, RequestMethod.PATCH})
     @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN')")
     @Operation(summary = "Set a resume version as active")
     public ResponseEntity<ApiResponse<ResumeDto>> activateResume(
             @PathVariable String resumeId,
             Principal principal) {
+
+        String sanitizedResumeId = sanitizeParam(resumeId);
+        if (sanitizedResumeId == null) {
+            throw new IllegalArgumentException("Resume ID is required for activation.");
+        }
 
         if (principal == null) {
             throw new org.springframework.security.access.AccessDeniedException("Authentication required.");
@@ -250,8 +285,11 @@ public class ResumeController {
 
         var user = userOpt.get();
         boolean isAdmin = user.getRole() == com.placement.portal.auth.Role.ROLE_ADMIN;
-        String authenticatedStudentId = null;
+        if (!isAdmin && user.getRole() != com.placement.portal.auth.Role.ROLE_STUDENT) {
+            throw new org.springframework.security.access.AccessDeniedException("Access denied: Only the owning student or an administrator may activate a resume.");
+        }
 
+        String authenticatedStudentId = null;
         if (user.getRole() == com.placement.portal.auth.Role.ROLE_STUDENT) {
             authenticatedStudentId = user.getReferenceId();
             if (authenticatedStudentId == null || authenticatedStudentId.isBlank()) {
@@ -259,26 +297,38 @@ public class ResumeController {
             }
         }
 
-        ResumeDto activated = resumeService.activateResume(authenticatedStudentId, resumeId, isAdmin);
+        ResumeDto activated = resumeService.activateResume(authenticatedStudentId, sanitizedResumeId, isAdmin);
         return ResponseEntity.ok(ApiResponse.ok(
                 "Resume version " + activated.getVersionNo() + " is now your active resume.",
                 activated
         ));
     }
 
+    private String sanitizeParam(String param) {
+        if (param == null || param.isBlank()) {
+            return null;
+        }
+        return param.trim();
+    }
+
     private void validateStudentAccess(String targetStudentId, Principal principal) {
         if (principal == null) return;
+        String normalizedTarget = targetStudentId != null ? targetStudentId.trim() : "";
         userContextService.findByUsername(principal.getName()).ifPresent(user -> {
             if (user.getRole() == com.placement.portal.auth.Role.ROLE_STUDENT) {
                 String refId = user.getReferenceId();
-                if (refId == null || !refId.equalsIgnoreCase(targetStudentId)) {
+                if (refId == null || refId.isBlank()) {
+                    refId = user.getUsername();
+                }
+                if (refId == null || !refId.trim().equalsIgnoreCase(normalizedTarget)) {
                     throw new org.springframework.security.access.AccessDeniedException(
                             "Access denied: Students may only access their own resume records."
                     );
                 }
             } else if (user.getRole() == com.placement.portal.auth.Role.ROLE_RECRUITER) {
-                recruiterAuthService.requireAuthorizedForStudent(principal, targetStudentId);
+                recruiterAuthService.requireAuthorizedForStudent(principal, normalizedTarget);
             }
         });
     }
 }
+

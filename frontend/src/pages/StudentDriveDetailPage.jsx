@@ -87,8 +87,24 @@ export default function StudentDriveDetailPage() {
     }
   };
 
+  const refreshActiveResume = async () => {
+    if (!studentId) return null;
+    try {
+      const latestResume = await api.getCurrentResume(studentId);
+      setCurrentResume(latestResume);
+      return latestResume;
+    } catch {
+      return null;
+    }
+  };
+
   useEffect(() => {
     loadData();
+    const handleMutation = () => {
+      refreshActiveResume();
+    };
+    window.addEventListener('portal:database-mutation', handleMutation);
+    return () => window.removeEventListener('portal:database-mutation', handleMutation);
   }, [id, studentId]);
 
 
@@ -319,7 +335,10 @@ export default function StudentDriveDetailPage() {
             </button>
           ) : isEligible ? (
             <button
-              onClick={() => setShowConfirmModal(true)}
+              onClick={async () => {
+                await refreshActiveResume();
+                setShowConfirmModal(true);
+              }}
               className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-md bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold transition-colors shadow-sm"
             >
               <Send className="w-4 h-4" /> Apply for This Drive

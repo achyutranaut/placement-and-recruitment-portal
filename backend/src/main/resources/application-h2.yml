@@ -22,6 +22,13 @@ spring:
     redis:
       repositories:
         enabled: false
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.neo4j.Neo4jRepositoriesAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.neo4j.Neo4jDataAutoConfiguration
+      - org.springframework.boot.autoconfigure.neo4j.Neo4jAutoConfiguration
+      - org.springframework.boot.actuate.autoconfigure.neo4j.Neo4jHealthContributorAutoConfiguration
+      - org.springframework.boot.actuate.autoconfigure.neo4j.Neo4jReactiveHealthContributorAutoConfiguration
 
 jwt:
   secret: ${JWT_SECRET:test-dummy-secret-key-for-local-h2-unit-tests-only-min-256-bits}

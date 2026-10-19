@@ -62,7 +62,8 @@ public class Neo4jReportService implements IReportService {
                 MATCH (s:Student {programId: $programId})
                 WITH count(s) AS totalStudents
                 OPTIONAL MATCH (s2:Student {programId: $programId})-[:SUBMITTED_APPLICATION]->(a:Application)-[:RECEIVED_OFFER]->(o:Offer)
-                RETURN CASE WHEN totalStudents > 0 THEN round((toFloat(count(DISTINCT s2)) / totalStudents) * 10000.0) / 100.0 ELSE 0.0 END AS rate
+                WITH totalStudents, count(DISTINCT s2) AS placedCount
+                RETURN CASE WHEN totalStudents > 0 THEN round((toFloat(placedCount) / totalStudents) * 10000.0) / 100.0 ELSE 0.0 END AS rate
             """;
             params.put("programId", programId);
         } else {
@@ -70,7 +71,8 @@ public class Neo4jReportService implements IReportService {
                 MATCH (s:Student)
                 WITH count(s) AS totalStudents
                 OPTIONAL MATCH (s2:Student)-[:SUBMITTED_APPLICATION]->(a:Application)-[:RECEIVED_OFFER]->(o:Offer)
-                RETURN CASE WHEN totalStudents > 0 THEN round((toFloat(count(DISTINCT s2)) / totalStudents) * 10000.0) / 100.0 ELSE 0.0 END AS rate
+                WITH totalStudents, count(DISTINCT s2) AS placedCount
+                RETURN CASE WHEN totalStudents > 0 THEN round((toFloat(placedCount) / totalStudents) * 10000.0) / 100.0 ELSE 0.0 END AS rate
             """;
         }
 
@@ -91,13 +93,13 @@ public class Neo4jReportService implements IReportService {
         if (industry != null && !industry.isBlank()) {
             cypher = """
                 MATCH (c:Company {industry: $industry})-[:HOSTS_DRIVE]->(d:Drive)<-[:FOR_DRIVE]-(a:Application)-[:RECEIVED_OFFER]->(o:Offer)
-                RETURN coalesce(round(avg(o.ctcLpa) * 100.0) / 100.0, 0.0) AS avgCtc
+                RETURN coalesce(round(avg(toFloat(o.ctcLpa)) * 100.0) / 100.0, 0.0) AS avgCtc
             """;
             params.put("industry", industry);
         } else {
             cypher = """
                 MATCH (o:Offer)
-                RETURN coalesce(round(avg(o.ctcLpa) * 100.0) / 100.0, 0.0) AS avgCtc
+                RETURN coalesce(round(avg(toFloat(o.ctcLpa)) * 100.0) / 100.0, 0.0) AS avgCtc
             """;
         }
 
@@ -223,7 +225,8 @@ public class Neo4jReportService implements IReportService {
             WITH p, count(DISTINCT s) AS enrolled
             WHERE enrolled > 0
             OPTIONAL MATCH (p)<-[:ENROLLED_IN]-(placed:Student)-[:SUBMITTED_APPLICATION]->(:Application)-[:RECEIVED_OFFER]->(:Offer)
-            RETURN p.programName AS programName, enrolled, count(DISTINCT placed) AS placed
+            WITH p, enrolled, count(DISTINCT placed) AS placed
+            RETURN p.programName AS programName, enrolled, placed
             ORDER BY programName ASC
         """;
         Collection<Map<String, Object>> pRows = neo4jClient.query(progStatsCypher).fetch().all();
@@ -264,9 +267,9 @@ public class Neo4jReportService implements IReportService {
             RETURN c.companyName AS companyName,
                    coalesce(c.industry, 'Technology') AS industry,
                    count(o) AS totalOffers,
-                   round(avg(o.ctcLpa) * 100.0) / 100.0 AS averageCtc,
-                   max(o.ctcLpa) AS highestCtc,
-                   min(o.ctcLpa) AS lowestCtc
+                   round(avg(toFloat(o.ctcLpa)) * 100.0) / 100.0 AS averageCtc,
+                   max(toFloat(o.ctcLpa)) AS highestCtc,
+                   min(toFloat(o.ctcLpa)) AS lowestCtc
             ORDER BY averageCtc DESC
         """;
 

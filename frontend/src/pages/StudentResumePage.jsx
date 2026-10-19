@@ -30,46 +30,73 @@ export default function StudentResumePage() {
   const [resumes, setResumes] = useState([]);
   const [currentResume, setCurrentResume] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [notification, setNotification] = useState(null);
   const [previewResumeId, setPreviewResumeId] = useState(null);
+  const [previewNonce, setPreviewNonce] = useState(() => Date.now());
   const [resumeToDelete, setResumeToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [activatingId, setActivatingId] = useState(null);
 
   const fileInputRef = useRef(null);
 
-  const loadResumes = async () => {
+  const isResumeActive = (r) =>
+    Boolean(r && (r.isCurrent === 'Y' || r.isActive === 'Y' || r.active === true));
+
+  const loadResumes = async ({ showSpinner = false, syncPreviewToActive = false } = {}) => {
     if (!studentId) {
       navigate('/login?role=STUDENT', { replace: true });
-      return;
+      return null;
     }
 
     try {
-      setLoading(true);
+      if (showSpinner) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
       const [allResumes, activeResume] = await Promise.all([
         api.getStudentResumes(studentId),
         api.getCurrentResume(studentId),
       ]);
-      setResumes(allResumes || []);
-      setCurrentResume(activeResume);
-      if (activeResume) {
-        setPreviewResumeId((prev) => (prev ? prev : activeResume.resumeId));
+      const normalizedList = Array.isArray(allResumes) ? allResumes : [];
+      const resolvedActive =
+        activeResume || normalizedList.find((r) => isResumeActive(r)) || null;
+
+      setResumes(normalizedList);
+      setCurrentResume(resolvedActive);
+
+      if (resolvedActive) {
+        setPreviewResumeId((prev) => {
+          const prevStillExists = prev && normalizedList.some((r) => r.resumeId === prev);
+          if (syncPreviewToActive || !prevStillExists) {
+            return resolvedActive.resumeId;
+          }
+          return prev;
+        });
+      } else {
+        setPreviewResumeId(normalizedList[0]?.resumeId || null);
       }
+      setPreviewNonce(Date.now());
+      return { allResumes: normalizedList, activeResume: resolvedActive };
     } catch (err) {
       console.error('Failed to load resumes:', err);
       setNotification({
         type: 'error',
+        title: 'Synchronization Error',
         message: err.message || 'Failed to retrieve resume history from Oracle BLOB storage.',
       });
+      return null;
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    loadResumes();
+    loadResumes({ showSpinner: true, syncPreviewToActive: true });
   }, [studentId]);
 
   const handleFileChange = (e) => {
@@ -80,6 +107,7 @@ export default function StudentResumePage() {
       if (!validTypes.includes(file.type) && !file.name.endsWith('.pdf') && !file.name.endsWith('.docx')) {
         setNotification({
           type: 'error',
+          title: 'Upload Error',
           message: 'Invalid file format. Please upload a PDF or Word document (.pdf, .docx).',
         });
         return;
@@ -91,23 +119,29 @@ export default function StudentResumePage() {
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    if (!selectedFile) return;
+    if (!selectedFile || uploading) return;
 
     setUploading(true);
     setNotification(null);
     try {
       const uploaded = await api.uploadResume(studentId, selectedFile);
-      setNotification({
-        type: 'success',
-        message: `Successfully uploaded ${uploaded.fileName} (Version ${uploaded.versionNo}) directly into Oracle BLOB storage.`,
-      });
       setSelectedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
-      await loadResumes();
+      setCurrentResume(uploaded);
       setPreviewResumeId(uploaded.resumeId);
+      await loadResumes({ showSpinner: false, syncPreviewToActive: true });
+      window.dispatchEvent(new CustomEvent('portal:database-mutation', {
+        detail: { type: 'RESUME_UPLOADED', resumeId: uploaded.resumeId, resume: uploaded }
+      }));
+      setNotification({
+        type: 'success',
+        title: 'Storage Acknowledged',
+        message: `Successfully uploaded ${uploaded.fileName} (Version ${uploaded.versionNo}) directly into Oracle BLOB storage.`,
+      });
     } catch (err) {
       setNotification({
         type: 'error',
+        title: 'Upload Error',
         message: err.message || 'Resume upload failed.',
       });
     } finally {
@@ -116,25 +150,28 @@ export default function StudentResumePage() {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!resumeToDelete) return;
+    if (!resumeToDelete || deleting) return;
     setDeleting(true);
     try {
-      await api.deleteResume(resumeToDelete.resumeId);
+      const deletedTarget = resumeToDelete;
+      await api.deleteResume(deletedTarget.resumeId);
+      setResumeToDelete(null);
+      await loadResumes({
+        showSpinner: false,
+        syncPreviewToActive: previewResumeId === deletedTarget.resumeId,
+      });
+      window.dispatchEvent(new CustomEvent('portal:database-mutation', {
+        detail: { type: 'RESUME_DELETED', resumeId: deletedTarget.resumeId }
+      }));
       setNotification({
         type: 'success',
-        message: `Successfully deleted ${resumeToDelete.fileName} (Version ${resumeToDelete.versionNo}). Record and Oracle BLOB purged.`,
+        title: 'Record Purged',
+        message: `Successfully deleted ${deletedTarget.fileName} (Version ${deletedTarget.versionNo}). Record and Oracle BLOB purged.`,
       });
-      if (previewResumeId === resumeToDelete.resumeId) {
-        setPreviewResumeId(null);
-      }
-      setResumeToDelete(null);
-      window.dispatchEvent(new CustomEvent('portal:database-mutation', {
-        detail: { type: 'RESUME_DELETED', resumeId: resumeToDelete.resumeId }
-      }));
-      await loadResumes();
     } catch (err) {
       setNotification({
         type: 'error',
+        title: 'Deletion Error',
         message: err.message || 'Failed to delete resume from Oracle database.',
       });
     } finally {
@@ -143,22 +180,38 @@ export default function StudentResumePage() {
   };
 
   const handleActivate = async (resume) => {
+    if (!resume?.resumeId || activatingId) return;
+
     setActivatingId(resume.resumeId);
+    setNotification(null);
     try {
-      await api.activateResume(resume.resumeId);
-      setPreviewResumeId(resume.resumeId);
+      const activated = await api.activateResume(resume.resumeId);
+      if (!activated || !activated.resumeId) {
+        throw new Error('Backend did not return valid activated resume metadata.');
+      }
+
+      // Apply authoritative backend response and refresh full state from Oracle
+      setCurrentResume(activated);
+      setPreviewResumeId(activated.resumeId);
+      setPreviewNonce(Date.now());
+      await loadResumes({ showSpinner: false, syncPreviewToActive: true });
+
+      window.dispatchEvent(new CustomEvent('portal:database-mutation', {
+        detail: { type: 'RESUME_ACTIVATED', resumeId: activated.resumeId, resume: activated }
+      }));
+
       setNotification({
         type: 'success',
-        message: `Resume ${resume.fileName} (Version ${resume.versionNo}) is now active.`,
+        title: 'Active Resume Updated',
+        message: `Resume ${activated.fileName} (Version ${activated.versionNo}) is now your active resume in Oracle.`,
       });
-      window.dispatchEvent(new CustomEvent('portal:database-mutation', {
-        detail: { type: 'RESUME_ACTIVATED', resumeId: resume.resumeId }
-      }));
-      await loadResumes();
     } catch (err) {
+      // Preserve previously committed active resume state and re-verify from backend
+      await loadResumes({ showSpinner: false, syncPreviewToActive: false });
       setNotification({
         type: 'error',
-        message: err.message || 'Failed to activate resume version.',
+        title: 'Activation Failed',
+        message: err.message || 'Failed to activate selected resume version.',
       });
     } finally {
       setActivatingId(null);
@@ -187,6 +240,10 @@ export default function StudentResumePage() {
       return isoString;
     }
   };
+
+  const previewedResume = resumes.find((r) => r.resumeId === previewResumeId) || (
+    currentResume?.resumeId === previewResumeId ? currentResume : null
+  );
 
   if (loading) {
     return (
@@ -219,6 +276,8 @@ export default function StudentResumePage() {
       {/* Notification Toast */}
       {notification && (
         <div
+          role="status"
+          aria-live="polite"
           className={`p-4 rounded-lg border flex items-start gap-3 text-sm ${
             notification.type === 'success'
               ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
@@ -232,7 +291,7 @@ export default function StudentResumePage() {
           )}
           <div className="flex-1">
             <span className="font-semibold text-xs uppercase tracking-wide">
-              {notification.type === 'success' ? 'Storage Acknowledged' : 'Upload Error'}
+              {notification.title || (notification.type === 'success' ? 'Storage Acknowledged' : 'Operation Error')}
             </span>
             <p className="mt-0.5 text-xs">{notification.message}</p>
           </div>
@@ -257,10 +316,13 @@ export default function StudentResumePage() {
 
           <div className="flex items-center gap-3">
             <button
-              onClick={loadResumes}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-md border border-slate-300 transition-colors"
+              type="button"
+              disabled={refreshing || Boolean(activatingId)}
+              onClick={() => loadResumes({ showSpinner: false, syncPreviewToActive: false })}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-md border border-slate-300 transition-colors disabled:opacity-50"
             >
-              <RefreshCw className="w-3.5 h-3.5" /> Refresh
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
         </div>
@@ -304,7 +366,7 @@ export default function StudentResumePage() {
 
               <button
                 type="submit"
-                disabled={!selectedFile || uploading}
+                disabled={!selectedFile || uploading || Boolean(activatingId)}
                 className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-md transition-colors shadow-sm disabled:opacity-50"
               >
                 <Upload className="w-4 h-4" />
@@ -315,7 +377,7 @@ export default function StudentResumePage() {
         </div>
 
         {/* Current Active Resume Card */}
-        <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm flex flex-col justify-between">
+        <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm flex flex-col justify-between" data-testid="active-resume-card">
           <div>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
@@ -323,7 +385,10 @@ export default function StudentResumePage() {
                 Current Active Resume
               </h2>
               {currentResume && (
-                <span className="px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <span
+                  data-testid="active-version-badge"
+                  className="px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200"
+                >
                   Version {currentResume.versionNo} Active
                 </span>
               )}
@@ -334,11 +399,13 @@ export default function StudentResumePage() {
                 <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-2 text-xs">
                   <div className="flex justify-between items-center">
                     <span className="text-slate-500">File Name:</span>
-                    <span className="font-semibold text-slate-800 truncate max-w-[240px]">{currentResume.fileName}</span>
+                    <span data-testid="active-resume-filename" className="font-semibold text-slate-800 truncate max-w-[240px]">
+                      {currentResume.fileName}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-500">File Size:</span>
-                    <span className="font-mono text-slate-800">{formatBytes(currentResume.fileSizeBytes)}</span>
+                    <span className="font-mono text-slate-800">{formatBytes(currentResume.fileSizeBytes || currentResume.fileSize)}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-500">Content Type:</span>
@@ -350,28 +417,39 @@ export default function StudentResumePage() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-500">Oracle Record ID:</span>
-                    <span className="font-mono text-slate-600 text-[11px]">{currentResume.resumeId}</span>
+                    <span data-testid="active-resume-id" className="font-mono text-slate-600 text-[11px]">
+                      {currentResume.resumeId}
+                    </span>
                   </div>
                 </div>
 
                 <div className="flex gap-2">
                   <button
                     type="button"
+                    disabled={Boolean(activatingId)}
                     onClick={async () => {
                       try {
                         await api.downloadResumeBlob(currentResume.resumeId, currentResume.fileName);
                       } catch (err) {
-                        alert(err.message || 'Download failed');
+                        setNotification({
+                          type: 'error',
+                          title: 'Download Failed',
+                          message: err.message || 'Failed to download active resume.',
+                        });
                       }
                     }}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-md text-xs font-semibold transition-colors"
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-md text-xs font-semibold transition-colors disabled:opacity-50"
                   >
                     <Download className="w-3.5 h-3.5" /> Download Active Resume
                   </button>
                   <button
                     type="button"
-                    onClick={() => setPreviewResumeId(currentResume.resumeId)}
-                    className="px-3 py-2 border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-md text-xs font-semibold inline-flex items-center gap-1.5 transition-colors"
+                    disabled={Boolean(activatingId)}
+                    onClick={() => {
+                      setPreviewResumeId(currentResume.resumeId);
+                      setPreviewNonce(Date.now());
+                    }}
+                    className="px-3 py-2 border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-md text-xs font-semibold inline-flex items-center gap-1.5 transition-colors disabled:opacity-50"
                   >
                     <Eye className="w-3.5 h-3.5" /> Preview
                   </button>
@@ -398,7 +476,7 @@ export default function StudentResumePage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-xs">
+          <table className="min-w-full divide-y divide-slate-200 text-xs" data-testid="resume-history-table">
             <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider text-[11px]">
               <tr>
                 <th className="px-4 py-3 text-left">Version</th>
@@ -410,99 +488,144 @@ export default function StudentResumePage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
-              {resumes.map((r) => (
-                <tr key={r.resumeId} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-3 font-mono font-bold text-slate-900">v{r.versionNo}</td>
-                  <td className="px-4 py-3 font-medium text-slate-800 max-w-[200px] truncate">{r.fileName}</td>
-                  <td className="px-4 py-3 font-mono text-slate-600">{formatBytes(r.fileSizeBytes)}</td>
-                  <td className="px-4 py-3 text-slate-600">{formatDate(r.uploadedAt)}</td>
-                  <td className="px-4 py-3">
-                    {r.isActive === 'Y' ? (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200">
-                        Active
-                      </span>
-                    ) : (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold text-slate-500 bg-slate-100 border border-slate-200">
-                        Archived
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right space-x-1.5 whitespace-nowrap">
-                    <button
-                      onClick={() => setPreviewResumeId(r.resumeId)}
-                      className="px-2 py-1 border border-slate-300 rounded text-slate-700 hover:bg-slate-100 font-medium inline-flex items-center gap-1 text-xs"
-                      title="Preview this resume in viewer"
-                    >
-                      <Eye className="w-3 h-3" /> View
-                    </button>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        try {
-                          await api.downloadResumeBlob(r.resumeId, r.fileName);
-                        } catch (err) {
-                          alert(err.message || 'Download failed');
-                        }
-                      }}
-                      className="px-2 py-1 bg-slate-900 text-white rounded hover:bg-slate-800 font-medium inline-flex items-center gap-1 text-xs"
-                      title="Download this resume document"
-                    >
-                      <Download className="w-3 h-3" /> Download
-                    </button>
-
-                    {/* Activation action for archived resumes */}
-                    {(r.isCurrent === 'N' || r.isActive === 'N') && (
+              {resumes.map((r) => {
+                const rowIsActive = isResumeActive(r);
+                const isActivatingThisRow = activatingId === r.resumeId;
+                return (
+                  <tr
+                    key={r.resumeId}
+                    data-testid={`resume-row-${r.resumeId}`}
+                    className={`transition-colors ${rowIsActive ? 'bg-emerald-50/20 hover:bg-emerald-50/40' : 'hover:bg-slate-50'}`}
+                  >
+                    <td className="px-4 py-3 font-mono font-bold text-slate-900">v{r.versionNo}</td>
+                    <td className="px-4 py-3 font-medium text-slate-800 max-w-[200px] truncate">{r.fileName}</td>
+                    <td className="px-4 py-3 font-mono text-slate-600">{formatBytes(r.fileSizeBytes || r.fileSize)}</td>
+                    <td className="px-4 py-3 text-slate-600">{formatDate(r.uploadedAt)}</td>
+                    <td className="px-4 py-3">
+                      {rowIsActive ? (
+                        <span
+                          data-testid={`status-active-${r.resumeId}`}
+                          className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200"
+                        >
+                          Active
+                        </span>
+                      ) : (
+                        <span
+                          data-testid={`status-archived-${r.resumeId}`}
+                          className="px-2 py-0.5 rounded text-[10px] font-semibold text-slate-500 bg-slate-100 border border-slate-200"
+                        >
+                          Archived
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right space-x-1.5 whitespace-nowrap">
                       <button
                         type="button"
-                        onClick={() => handleActivate(r)}
-                        disabled={activatingId === r.resumeId}
-                        className="px-2 py-1 bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100 rounded font-medium inline-flex items-center gap-1 text-xs transition-colors disabled:opacity-50"
-                        title="Set this version as your active resume"
+                        onClick={() => {
+                          setPreviewResumeId(r.resumeId);
+                          setPreviewNonce(Date.now());
+                        }}
+                        className="px-2 py-1 border border-slate-300 rounded text-slate-700 hover:bg-slate-100 font-medium inline-flex items-center gap-1 text-xs"
+                        title="Preview this resume version in viewer"
                       >
-                        <Check className="w-3 h-3 text-emerald-600" />
-                        {activatingId === r.resumeId ? 'Activating...' : 'Set Active'}
+                        <Eye className="w-3 h-3" /> View
                       </button>
-                    )}
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await api.downloadResumeBlob(r.resumeId, r.fileName);
+                          } catch (err) {
+                            setNotification({
+                              type: 'error',
+                              title: 'Download Failed',
+                              message: err.message || 'Failed to download selected resume version.',
+                            });
+                          }
+                        }}
+                        className="px-2 py-1 bg-slate-900 text-white rounded hover:bg-slate-800 font-medium inline-flex items-center gap-1 text-xs"
+                        title="Download this specific resume version"
+                      >
+                        <Download className="w-3 h-3" /> Download
+                      </button>
 
-                    {/* Delete action */}
-                    {(r.isCurrent === 'Y' || r.isActive === 'Y') ? (
-                      resumes.length <= 1 ? (
+                      {/* Activation action: disabled on already-active version; active for archived versions */}
+                      {rowIsActive ? (
                         <button
                           type="button"
                           disabled
-                          className="px-2 py-1 bg-slate-100 text-slate-400 border border-slate-200 rounded font-medium inline-flex items-center gap-1 text-xs cursor-not-allowed"
-                          title="This is your active resume. Upload another resume and activate it before deleting this version."
+                          data-testid={`active-indicator-btn-${r.resumeId}`}
+                          className="px-2 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded font-semibold inline-flex items-center gap-1 text-xs cursor-not-allowed opacity-75"
+                          title="This resume version is currently active"
                         >
-                          <Trash2 className="w-3 h-3" /> Delete
+                          <Check className="w-3 h-3 text-emerald-600" />
+                          Active
                         </button>
                       ) : (
                         <button
                           type="button"
-                          onClick={() => {
-                            setNotification({
-                              type: 'error',
-                              message: 'This is your currently active resume. Please activate another resume version first before deleting this version.',
-                            });
-                          }}
-                          className="px-2 py-1 bg-slate-100 text-slate-500 hover:text-slate-700 border border-slate-200 rounded font-medium inline-flex items-center gap-1 text-xs"
-                          title="This is your active resume. Activate another version first to delete this."
+                          onClick={() => handleActivate(r)}
+                          disabled={Boolean(activatingId)}
+                          data-testid={`set-active-btn-${r.resumeId}`}
+                          className="px-2 py-1 bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100 rounded font-medium inline-flex items-center gap-1 text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Set this version as your active resume"
                         >
-                          <Lock className="w-3 h-3 text-slate-400" /> Delete
+                          {isActivatingThisRow ? (
+                            <>
+                              <RefreshCw className="w-3 h-3 text-emerald-600 animate-spin" />
+                              Activating...
+                            </>
+                          ) : (
+                            <>
+                              <Check className="w-3 h-3 text-emerald-600" />
+                              Set Active
+                            </>
+                          )}
                         </button>
-                      )
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setResumeToDelete(r)}
-                        className="px-2 py-1 bg-white text-rose-600 border border-rose-200 hover:bg-rose-50 hover:border-rose-300 rounded font-medium inline-flex items-center gap-1 text-xs transition-colors"
-                        title="Permanently delete this resume version"
-                      >
-                        <Trash2 className="w-3 h-3" /> Delete
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                      )}
+
+                      {/* Delete action */}
+                      {rowIsActive ? (
+                        resumes.length <= 1 ? (
+                          <button
+                            type="button"
+                            disabled
+                            className="px-2 py-1 bg-slate-100 text-slate-400 border border-slate-200 rounded font-medium inline-flex items-center gap-1 text-xs cursor-not-allowed"
+                            title="This is your active resume. Upload another resume and activate it before deleting this version."
+                          >
+                            <Trash2 className="w-3 h-3" /> Delete
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNotification({
+                                type: 'error',
+                                title: 'Active Resume Protected',
+                                message: 'This is your currently active resume. Please activate another resume version first before deleting this version.',
+                              });
+                            }}
+                            className="px-2 py-1 bg-slate-100 text-slate-500 hover:text-slate-700 border border-slate-200 rounded font-medium inline-flex items-center gap-1 text-xs"
+                            title="This is your active resume. Activate another version first to delete this."
+                          >
+                            <Lock className="w-3 h-3 text-slate-400" /> Delete
+                          </button>
+                        )
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={Boolean(activatingId)}
+                          onClick={() => setResumeToDelete(r)}
+                          className="px-2 py-1 bg-white text-rose-600 border border-rose-200 hover:bg-rose-50 hover:border-rose-300 rounded font-medium inline-flex items-center gap-1 text-xs transition-colors disabled:opacity-50"
+                          title="Permanently delete this resume version"
+                        >
+                          <Trash2 className="w-3 h-3" /> Delete
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
               {resumes.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-slate-400">
@@ -518,15 +641,25 @@ export default function StudentResumePage() {
       {/* Live PDF/Document Preview Frame */}
       {previewResumeId && (
         <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200">
             <div className="flex items-center gap-2">
               <Eye className="w-4 h-4 text-slate-600" />
               <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800">
                 Live Document Stream Preview (Resume ID: {previewResumeId})
               </h2>
+              {previewedResume && (
+                <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-slate-100 text-slate-700 border border-slate-300">
+                  v{previewedResume.versionNo} • {previewedResume.fileName}
+                </span>
+              )}
+              {previewedResume && isResumeActive(previewedResume) && (
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  Active Document
+                </span>
+              )}
             </div>
             <a
-              href={api.getResumeDownloadUrl(previewResumeId)}
+              href={api.getResumeDownloadUrl(previewResumeId, previewNonce)}
               target="_blank"
               rel="noreferrer"
               className="text-xs font-semibold text-blue-700 hover:underline inline-flex items-center gap-1"
@@ -537,7 +670,8 @@ export default function StudentResumePage() {
 
           <div className="w-full h-[500px] border border-slate-200 rounded-lg overflow-hidden bg-slate-100 flex items-center justify-center">
             <iframe
-              src={api.getResumeDownloadUrl(previewResumeId)}
+              key={`${previewResumeId}-${previewNonce}`}
+              src={api.getResumeDownloadUrl(previewResumeId, previewNonce)}
               title="Resume Preview"
               className="w-full h-full"
             />

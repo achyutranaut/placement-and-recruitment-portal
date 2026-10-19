@@ -16,16 +16,22 @@ public class AuditEventNode {
     private String newStatus;
     private LocalDateTime changedAt = LocalDateTime.now();
     private String changedBy = "SYSTEM";
+    private String triggerSource = "GRAPH_ENGINE";
 
     public AuditEventNode() {}
 
     public AuditEventNode(String auditId, String applicationId, String oldStatus, String newStatus, String changedBy) {
+        this(auditId, applicationId, oldStatus, newStatus, changedBy, "GRAPH_ENGINE");
+    }
+
+    public AuditEventNode(String auditId, String applicationId, String oldStatus, String newStatus, String changedBy, String triggerSource) {
         this.auditId = auditId;
         this.applicationId = applicationId;
         this.oldStatus = oldStatus;
         this.newStatus = newStatus;
         this.changedAt = LocalDateTime.now();
         this.changedBy = changedBy != null ? changedBy : "SYSTEM";
+        this.triggerSource = triggerSource != null ? triggerSource : "GRAPH_ENGINE";
     }
 
     public String getAuditId() { return auditId; }
@@ -45,4 +51,7 @@ public class AuditEventNode {
 
     public String getChangedBy() { return changedBy; }
     public void setChangedBy(String changedBy) { this.changedBy = changedBy; }
+
+    public String getTriggerSource() { return triggerSource; }
+    public void setTriggerSource(String triggerSource) { this.triggerSource = triggerSource; }
 }

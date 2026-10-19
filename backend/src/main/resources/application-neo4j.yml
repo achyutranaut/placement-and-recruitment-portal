@@ -26,6 +26,11 @@ portal:
   resume:
     storage-dir: ${PORTAL_RESUME_STORAGE_DIR:./data/resumes}
 
+management:
+  health:
+    neo4j:
+      enabled: true
+
 logging:
   level:
     org.springframework.data.neo4j: DEBUG

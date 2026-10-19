@@ -72,9 +72,16 @@ public class AuthService implements IAuthService {
             userOpt = userRepository.findByUsernameIgnoreCase(identifier);
         }
 
-        // Check if student logged in using VIT student email or registration number
         if (userOpt.isEmpty()) {
-            var stuOpt = studentRepository.findByEmail(identifier.toLowerCase());
+            userOpt = userRepository.findByReferenceId(identifier);
+        }
+
+        // Check if student logged in using studentId, VIT student email, or registration number
+        if (userOpt.isEmpty()) {
+            var stuOpt = studentRepository.findById(identifier.toUpperCase());
+            if (stuOpt.isEmpty()) {
+                stuOpt = studentRepository.findByEmail(identifier.toLowerCase());
+            }
             if (stuOpt.isEmpty()) {
                 stuOpt = studentRepository.findByRegistrationNo(identifier.toUpperCase());
             }

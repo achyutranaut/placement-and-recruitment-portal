@@ -51,29 +51,13 @@ if command -v docker >/dev/null 2>&1; then
     fi
 fi
 
-if [ "$REQUESTED_DB" = "neo4j" ]; then
-    DB_PROFILE="neo4j"
-    echo "[*] Selected backend database: Neo4j Graph Database (--db neo4j)"
-    if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
-        if ! nc -z localhost 7687 2>/dev/null; then
-            echo "[*] Starting Neo4j container via docker-compose..."
-            docker compose -f "$DIR/infrastructure/docker-compose.neo4j.yml" up -d
-            echo -n "[*] Waiting for Neo4j Bolt listener on port 7687"
-            for i in {1..30}; do
-                if nc -z localhost 7687 2>/dev/null; then
-                    echo " ready!"
-                    break
-                fi
-                echo -n "."
-                sleep 1
-            done
-            echo ""
-        else
-            echo "[✓] Neo4j detected active on port 7687 (Bolt)."
-        fi
-    fi
-else
-    # Default Oracle / auto-detect behavior
+# Default database backend to Neo4j if not specified
+if [ -z "$REQUESTED_DB" ]; then
+    REQUESTED_DB="neo4j"
+fi
+
+if [ "$REQUESTED_DB" = "oracle" ]; then
+    # Explicit Oracle backend selection (--db oracle)
     if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
         if ! nc -z localhost 1521 2>/dev/null; then
             echo "[*] Starting Oracle Database container..."
@@ -105,6 +89,27 @@ else
         echo "[!] Oracle Database not detected on port 1521."
         echo "[*] Falling back to offline H2 profile with Oracle compatibility mode."
         DB_PROFILE="h2"
+    fi
+else
+    DB_PROFILE="neo4j"
+    echo "[*] Selected backend database: Neo4j Graph Database (profile neo4j)"
+    if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+        if ! nc -z localhost 7687 2>/dev/null; then
+            echo "[*] Starting Neo4j container via docker-compose..."
+            docker compose -f "$DIR/infrastructure/docker-compose.neo4j.yml" up -d
+            echo -n "[*] Waiting for Neo4j Bolt listener on port 7687"
+            for i in {1..30}; do
+                if nc -z localhost 7687 2>/dev/null; then
+                    echo " ready!"
+                    break
+                fi
+                echo -n "."
+                sleep 1
+            done
+            echo ""
+        else
+            echo "[✓] Neo4j detected active on port 7687 (Bolt)."
+        fi
     fi
 fi
 

@@ -48,8 +48,8 @@ public class Neo4jGraphAnalyticsService {
             String driveId = (String) r.get("driveId");
             String jobTitle = (String) r.get("jobTitle");
             String companyName = (String) r.get("companyName");
-            BigDecimal ctc = r.get("ctcLpa") != null ? BigDecimal.valueOf(((Number) r.get("ctcLpa")).doubleValue()) : BigDecimal.ZERO;
-            BigDecimal minCgpa = r.get("minCgpa") != null ? BigDecimal.valueOf(((Number) r.get("minCgpa")).doubleValue()) : BigDecimal.ZERO;
+            BigDecimal ctc = parseBigDecimal(r.get("ctcLpa"));
+            BigDecimal minCgpa = parseBigDecimal(r.get("minCgpa"));
             LocalDate deadline = (LocalDate) r.get("deadline");
             @SuppressWarnings("unchecked")
             List<String> path = (List<String>) r.get("traversalPath");
@@ -100,9 +100,7 @@ public class Neo4jGraphAnalyticsService {
             dto.setJobTitle((String) r.get("jobTitle"));
             dto.setCompanyName((String) r.get("companyName"));
             dto.setOfferId((String) r.get("offerId"));
-            if (r.get("ctcLpa") != null) {
-                dto.setCtcLpa(BigDecimal.valueOf(((Number) r.get("ctcLpa")).doubleValue()));
-            }
+            dto.setCtcLpa(parseBigDecimal(r.get("ctcLpa")));
             dto.setOfferStatus((String) r.get("offerStatus"));
 
             // Fetch interview steps for this application
@@ -120,10 +118,10 @@ public class Neo4jGraphAnalyticsService {
 
             List<GraphShowcaseDto.InterviewStepDto> steps = new ArrayList<>();
             for (Map<String, Object> ivr : ivRows) {
-                Integer rNo = ivr.get("roundNo") != null ? ((Number) ivr.get("roundNo")).intValue() : 1;
+                Integer rNo = parseInteger(ivr.get("roundNo"), 1);
                 String iName = (String) ivr.get("interviewerName");
                 String res = (String) ivr.get("result");
-                BigDecimal sc = ivr.get("score") != null ? BigDecimal.valueOf(((Number) ivr.get("score")).doubleValue()) : BigDecimal.ZERO;
+                BigDecimal sc = parseBigDecimal(ivr.get("score"));
                 steps.add(new GraphShowcaseDto.InterviewStepDto(rNo, iName, res, sc));
             }
             dto.setInterviewSteps(steps);
@@ -149,7 +147,7 @@ public class Neo4jGraphAnalyticsService {
                    c.companyName AS companyName,
                    drivesCount,
                    count(DISTINCT o) AS offersCount,
-                   coalesce(round(avg(o.ctcLpa) * 100.0) / 100.0, 0.0) AS averageCtc
+                   coalesce(round(avg(toFloat(o.ctcLpa)) * 100.0) / 100.0, 0.0) AS averageCtc
             ORDER BY offersCount DESC, drivesCount DESC
         """;
 
@@ -163,9 +161,9 @@ public class Neo4jGraphAnalyticsService {
             String progName = (String) r.get("programName");
             String compId = (String) r.get("companyId");
             String compName = (String) r.get("companyName");
-            long dCount = ((Number) r.get("drivesCount")).longValue();
-            long oCount = ((Number) r.get("offersCount")).longValue();
-            double avgCtc = ((Number) r.get("averageCtc")).doubleValue();
+            long dCount = parseLong(r.get("drivesCount"));
+            long oCount = parseLong(r.get("offersCount"));
+            double avgCtc = parseDouble(r.get("averageCtc"));
             list.add(new GraphShowcaseDto.ProgramHiringPipelineDto(progId, progName, compId, compName, dCount, oCount, avgCtc));
         }
         return list;
@@ -250,12 +248,52 @@ public class Neo4jGraphAnalyticsService {
         List<GraphShowcaseDto.InterviewerWorkloadDto> list = new ArrayList<>();
         for (Map<String, Object> r : rows) {
             String name = (String) r.get("interviewerName");
-            Integer rNo = r.get("roundNo") != null ? ((Number) r.get("roundNo")).intValue() : 1;
-            long scheduled = ((Number) r.get("totalScheduled")).longValue();
-            long cleared = ((Number) r.get("clearedCount")).longValue();
-            long rejected = ((Number) r.get("rejectedCount")).longValue();
+            Integer rNo = parseInteger(r.get("roundNo"), 1);
+            long scheduled = parseLong(r.get("totalScheduled"));
+            long cleared = parseLong(r.get("clearedCount"));
+            long rejected = parseLong(r.get("rejectedCount"));
             list.add(new GraphShowcaseDto.InterviewerWorkloadDto(name, rNo, scheduled, cleared, rejected));
         }
         return list;
+    }
+
+    private BigDecimal parseBigDecimal(Object val) {
+        if (val == null) return BigDecimal.ZERO;
+        if (val instanceof Number n) return BigDecimal.valueOf(n.doubleValue());
+        try {
+            return new BigDecimal(val.toString().trim());
+        } catch (Exception e) {
+            return BigDecimal.ZERO;
+        }
+    }
+
+    private Integer parseInteger(Object val, int defaultVal) {
+        if (val == null) return defaultVal;
+        if (val instanceof Number n) return n.intValue();
+        try {
+            return Integer.parseInt(val.toString().trim());
+        } catch (Exception e) {
+            return defaultVal;
+        }
+    }
+
+    private double parseDouble(Object val) {
+        if (val == null) return 0.0;
+        if (val instanceof Number n) return n.doubleValue();
+        try {
+            return Double.parseDouble(val.toString().trim());
+        } catch (Exception e) {
+            return 0.0;
+        }
+    }
+
+    private long parseLong(Object val) {
+        if (val == null) return 0L;
+        if (val instanceof Number n) return n.longValue();
+        try {
+            return Long.parseLong(val.toString().trim());
+        } catch (Exception e) {
+            return 0L;
+        }
     }
 }

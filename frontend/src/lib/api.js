@@ -190,31 +190,48 @@ export const api = {
   },
 
   async getStudentResumes(studentId) {
-    const res = await fetch(`${BASE_URL}/resumes/student/${studentId}`, { headers: getAuthHeaders() });
+    const res = await fetch(`${BASE_URL}/resumes/student/${encodeURIComponent(studentId)}`, {
+      headers: getAuthHeaders(),
+      cache: 'no-store',
+    });
     return handleResponse(res);
   },
 
   async getCurrentResume(studentId) {
-    const res = await fetch(`${BASE_URL}/resumes/student/${studentId}/current`, { headers: getAuthHeaders() });
+    const res = await fetch(`${BASE_URL}/resumes/student/${encodeURIComponent(studentId)}/current`, {
+      headers: getAuthHeaders(),
+      cache: 'no-store',
+    });
     return handleResponse(res);
   },
 
-  getResumeDownloadUrl(resumeId) {
+  getResumeDownloadUrl(resumeId, cacheBust = null) {
     const token = localStorage.getItem('portal_token');
-    return token
-      ? `${BASE_URL}/resumes/${resumeId}/download?token=${encodeURIComponent(token)}`
-      : `${BASE_URL}/resumes/${resumeId}/download`;
+    const params = new URLSearchParams();
+    if (token) params.set('token', token);
+    if (cacheBust) params.set('v', String(cacheBust));
+    const qs = params.toString();
+    return qs
+      ? `${BASE_URL}/resumes/${encodeURIComponent(resumeId)}/download?${qs}`
+      : `${BASE_URL}/resumes/${encodeURIComponent(resumeId)}/download`;
   },
 
-  getStudentCurrentResumeDownloadUrl(studentId) {
+  getStudentCurrentResumeDownloadUrl(studentId, cacheBust = null) {
     const token = localStorage.getItem('portal_token');
-    return token
-      ? `${BASE_URL}/resumes/student/${studentId}/current/download?token=${encodeURIComponent(token)}`
-      : `${BASE_URL}/resumes/student/${studentId}/current/download`;
+    const params = new URLSearchParams();
+    if (token) params.set('token', token);
+    if (cacheBust) params.set('v', String(cacheBust));
+    const qs = params.toString();
+    return qs
+      ? `${BASE_URL}/resumes/student/${encodeURIComponent(studentId)}/current/download?${qs}`
+      : `${BASE_URL}/resumes/student/${encodeURIComponent(studentId)}/current/download`;
   },
 
   async downloadResumeBlob(resumeId, filename = 'student_resume.pdf') {
-    const res = await fetch(`${BASE_URL}/resumes/${resumeId}/download`, { headers: getAuthHeaders() });
+    const res = await fetch(`${BASE_URL}/resumes/${encodeURIComponent(resumeId)}/download`, {
+      headers: getAuthHeaders(),
+      cache: 'no-store',
+    });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: 'Resume download failed' }));
       throw new Error(err.message || 'Resume download failed');
@@ -231,7 +248,10 @@ export const api = {
   },
 
   async viewResumeBlob(resumeId) {
-    const res = await fetch(`${BASE_URL}/resumes/${resumeId}/download`, { headers: getAuthHeaders() });
+    const res = await fetch(`${BASE_URL}/resumes/${encodeURIComponent(resumeId)}/download`, {
+      headers: getAuthHeaders(),
+      cache: 'no-store',
+    });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: 'Unable to open resume' }));
       throw new Error(err.message || 'Unable to open resume');
@@ -242,7 +262,7 @@ export const api = {
   },
 
   async deleteResume(resumeId) {
-    const res = await fetch(`${BASE_URL}/resumes/${resumeId}`, {
+    const res = await fetch(`${BASE_URL}/resumes/${encodeURIComponent(resumeId)}`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
@@ -250,7 +270,7 @@ export const api = {
   },
 
   async activateResume(resumeId) {
-    const res = await fetch(`${BASE_URL}/resumes/${resumeId}/activate`, {
+    const res = await fetch(`${BASE_URL}/resumes/${encodeURIComponent(resumeId)}/activate`, {
       method: 'PUT',
       headers: getAuthHeaders(),
     });
@@ -569,4 +589,57 @@ export const api = {
     });
     return handleResponse(res);
   },
+
+  // Admin Graph Management & Mutations (Neo4j profile)
+  async getGraphEntities(label, limit = 100) {
+    const res = await fetch(`${BASE_URL}/graph/entities/${encodeURIComponent(label)}?limit=${limit}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(res);
+  },
+
+  async createGraphEntity(label, properties) {
+    const res = await fetch(`${BASE_URL}/graph/entities`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ label, properties }),
+    });
+    return handleResponse(res);
+  },
+
+  async updateGraphEntity(label, id, properties) {
+    const res = await fetch(`${BASE_URL}/graph/entities/${encodeURIComponent(label)}/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ properties }),
+    });
+    return handleResponse(res);
+  },
+
+  async deleteGraphEntity(label, id) {
+    const res = await fetch(`${BASE_URL}/graph/entities/${encodeURIComponent(label)}/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(res);
+  },
+
+  async createGraphRelationship(fromLabel, fromId, toLabel, toId, type) {
+    const res = await fetch(`${BASE_URL}/graph/relationships`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ fromLabel, fromId, toLabel, toId, type }),
+    });
+    return handleResponse(res);
+  },
+
+  async deleteGraphRelationship(fromLabel, fromId, toLabel, toId, type) {
+    const res = await fetch(`${BASE_URL}/graph/relationships`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ fromLabel, fromId, toLabel, toId, type }),
+    });
+    return handleResponse(res);
+  },
 };
+
