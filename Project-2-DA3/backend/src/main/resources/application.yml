@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: student-placement-portal
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:oracle}
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.neo4j.Neo4jAutoConfiguration
+      - org.springframework.boot.actuate.autoconfigure.neo4j.Neo4jHealthContributorAutoConfiguration
+  jpa:
+    hibernate:
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 15MB
+
+server:
+  port: ${SERVER_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  health:
+    redis:
+      enabled: false
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+jwt:
+  secret: ${JWT_SECRET:}
+  expiration-ms: 86400000 # 24 hours
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3001,http://127.0.0.1:3001,http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173}
+
+portal:
+  security:
+    admin:
+      bootstrap-enabled: ${ADMIN_BOOTSTRAP_ENABLED:false}
+      bootstrap-password: ${ADMIN_BOOTSTRAP_PASSWORD:}
+  neo4j:
+    enabled: ${PORTAL_NEO4J_ENABLED:false}
+    uri: ${NEO4J_URI:neo4j+s://demo.databases.neo4j.io}
+    username: ${NEO4J_USERNAME:neo4j}
+    password: ${NEO4J_PASSWORD:}
+
+

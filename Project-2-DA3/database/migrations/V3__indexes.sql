@@ -1,0 +1,30 @@
+-- ============================================================
+-- V3__indexes.sql
+-- Performance and Search Indexes for Oracle Database
+-- (Updated per Locked Decision 1: Program-Scoped Batch_No)
+-- ============================================================
+
+-- Foreign Key Support Indexes
+CREATE INDEX IDX_STUPHONE_STUDENT ON STUDENT_PHONE (Student_Id);
+CREATE INDEX IDX_REGISTERS_PROG ON REGISTERS (Program_Id);
+CREATE INDEX IDX_BATCH_PROG ON BATCH (Program_Id);
+-- Note: BATCH_PROGRAM(Program_Id, Batch_No) is already indexed by PK_BATCH_PROGRAM
+CREATE INDEX IDX_ATTENDS_BATCH ON ATTENDS (Program_Id, Batch_No);
+CREATE INDEX IDX_ATTENDS_STUDENT ON ATTENDS (Student_Id);
+CREATE INDEX IDX_BTP_BATCH ON BATCH_TITLE_PROGRAM (Program_Id, Batch_No);
+CREATE INDEX IDX_ASSESSMENT_BTP ON ASSESSMENT (Program_Id, Batch_No, Title);
+CREATE INDEX IDX_COMPANY_EMAIL ON COMPANY (Email);
+CREATE INDEX IDX_COMPHONE_COMP ON COMPANY_PHONE (Company_Id);
+CREATE INDEX IDX_JOB_COMP ON JOB_COMPANY (Company_Id);
+CREATE INDEX IDX_DRIVE_JOB ON PLACEMENT_DRIVE (Job_Title);
+CREATE INDEX IDX_ROUTINE_DRIVE ON STUDENT_DAILY_ROUTINE_DRIVE (Drive_Id);
+
+-- Query & Status Optimization Indexes
+CREATE INDEX IDX_APP_STATUS ON APPLICATION (Status);
+CREATE INDEX IDX_APP_STUDENT_DATE ON APPLICATION (Student_Id, Apply_Date);
+CREATE INDEX IDX_INTERVIEW_APP ON INTERVIEW (Application_Id);
+CREATE INDEX IDX_INTERVIEW_ROUND ON INTERVIEW (Interviewer_Name);
+-- Note: OFFER_LETTER(Application_Id) is already indexed by unique constraint UQ_OFFER_APPLICATION
+CREATE INDEX IDX_AUDIT_APP ON APPLICATION_AUDIT (Application_Id);
+CREATE INDEX IDX_STUDENT_CGPA ON STUDENT (CGPA);
+CREATE INDEX IDX_DRIVE_MINCGPA ON PLACEMENT_DRIVE (Min_CGPA);
