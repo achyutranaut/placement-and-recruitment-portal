@@ -7,8 +7,11 @@ on:
     branches: [ main, master ]
 
 jobs:
-  backend-test:
-    name: Backend Test & Build (Java 21 / Spring Boot)
+  # ============================================================================
+  # PROJECT 2 (DA3 SUBMISSION) — OFFICIAL SUBMISSION VALIDATION
+  # ============================================================================
+  project-2-da3-backend:
+    name: "Project 2 (DA3): Backend Test & Build"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -21,18 +24,18 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Run Backend Unit & Integration Tests
+      - name: Run DA3 Backend Unit & Integration Tests (171 Tests)
         run: |
-          cd backend
-          mvn clean test --batch-mode
+          cd Project-2-DA3/backend
+          mvn clean test -Dtest='!LiveOracleResumeIntegrationTests' --batch-mode
 
-      - name: Package Spring Boot Application
+      - name: Package DA3 Spring Boot Application
         run: |
-          cd backend
+          cd Project-2-DA3/backend
           mvn package -DskipTests --batch-mode
 
-  frontend-build:
-    name: Frontend Build (React 19 / Vite / Tailwind)
+  project-2-da3-frontend:
+    name: "Project 2 (DA3): Frontend Build & Vitest"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -43,14 +46,65 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: Project-2-DA3/frontend/package-lock.json
 
       - name: Install Frontend Dependencies
         run: |
-          cd frontend
+          cd Project-2-DA3/frontend
           npm ci --prefer-offline || npm install
 
       - name: Run Frontend Production Build
         run: |
-          cd frontend
+          cd Project-2-DA3/frontend
           npm run build
+
+      - name: Run Frontend Unit & Security Tests (Vitest)
+        run: |
+          cd Project-2-DA3/frontend
+          npx vitest run
+
+  # ============================================================================
+  # PROJECT 1 (EXISTING BASELINE) — BUILD VALIDATION
+  # ============================================================================
+  project-1-existing-frontend:
+    name: "Project 1 (Existing): Frontend Build"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: Project-1-Existing/frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        run: |
+          cd Project-1-Existing/frontend
+          npm ci --prefer-offline || npm install
+
+      - name: Run Frontend Production Build
+        run: |
+          cd Project-1-Existing/frontend
+          npm run build
+
+  project-1-existing-backend:
+    name: "Project 1 (Existing): Backend Compile"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Compile Backend Classes
+        run: |
+          cd Project-1-Existing/backend
+          mvn test-compile --batch-mode
