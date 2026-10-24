@@ -306,14 +306,16 @@ export default function GraphViewPage() {
         const compId = `COM_${app.companyName ? app.companyName.replace(/\s+/g, '_') : 'PARTNER'}`;
 
         // 2. Application Node
+        const canonicalStatus = app.applicationStatus || app.offerStatus || 'APPLIED';
         addRawNode({
           id: appId,
           nodeType: 'Application',
           name: appId,
-          subtitle: app.offerStatus || 'IN_PROGRESS',
+          subtitle: canonicalStatus,
           details: {
             applicationId: appId,
-            offerStatus: app.offerStatus || 'IN_PROGRESS',
+            applicationStatus: canonicalStatus,
+            offerStatus: app.offerStatus || 'NONE',
             jobTitle: app.jobTitle,
             companyName: app.companyName,
             packageLpa: app.ctcLpa > 0 ? `${app.ctcLpa} LPA` : 'Pending',
@@ -1361,7 +1363,7 @@ export default function GraphViewPage() {
                 Aura Graph Projection Controls
               </span>
               <p className="text-[11px] text-slate-300">
-                Project authoritative Oracle transactional data into Neo4j Aura cloud graph nodes and edges.
+                Authoritative Oracle 23ai transactional data reconciled into Neo4j Aura cloud graph nodes and edges.
               </p>
             </div>
           </div>
@@ -1370,10 +1372,10 @@ export default function GraphViewPage() {
               onClick={handleSyncAura}
               disabled={syncingAura}
               className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow transition-colors disabled:opacity-50"
-              title="Synchronize Oracle transactional tables to Neo4j Aura"
+              title="Reconcile Oracle transactional source of truth to Neo4j Aura"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${syncingAura ? 'animate-spin' : ''}`} />
-              {syncingAura ? 'Syncing...' : 'Sync Oracle to Aura'}
+              {syncingAura ? 'Reconciling...' : 'Reconcile Oracle to Aura'}
             </button>
             <button
               onClick={() => setShowAddModal(true)}

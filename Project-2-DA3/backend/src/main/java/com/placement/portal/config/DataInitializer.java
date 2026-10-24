@@ -1,7 +1,15 @@
 package com.placement.portal.config;
 
+import com.placement.portal.company.Company;
+import com.placement.portal.company.CompanyRepository;
+import com.placement.portal.company.EmailCompany;
+import com.placement.portal.company.EmailCompanyRepository;
+import com.placement.portal.company.JobCompany;
+import com.placement.portal.company.JobCompanyRepository;
 import com.placement.portal.program.Program;
 import com.placement.portal.program.ProgramRepository;
+import com.placement.portal.recruitment.PlacementDrive;
+import com.placement.portal.recruitment.PlacementDriveRepository;
 import com.placement.portal.student.Student;
 import com.placement.portal.student.StudentRepository;
 import org.slf4j.Logger;
@@ -12,30 +20,43 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 /**
  * Production DataInitializer:
- * Ensures only the canonical university degree programs exist as master reference data
- * in the Oracle PROGRAM table.
- * 
- * NO MOCK STUDENTS, COMPANIES, DRIVES, OFFERS, OR APPLICATIONS ARE SEEDED.
+ * Ensures the canonical university degree programs and primary demo personas
+ * (student 25bce1799, recruiter1, recruiter2, and corporate partners) exist
+ * as reliable master baseline entities.
  */
 @Component
 @Order(1)
+@org.springframework.context.annotation.Profile("!h2")
 public class DataInitializer implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DataInitializer.class);
 
     private final ProgramRepository programRepository;
     private final StudentRepository studentRepository;
+    private final CompanyRepository companyRepository;
+    private final EmailCompanyRepository emailCompanyRepository;
+    private final JobCompanyRepository jobCompanyRepository;
+    private final PlacementDriveRepository driveRepository;
 
     public DataInitializer(
             ProgramRepository programRepository,
-            StudentRepository studentRepository
+            StudentRepository studentRepository,
+            CompanyRepository companyRepository,
+            EmailCompanyRepository emailCompanyRepository,
+            JobCompanyRepository jobCompanyRepository,
+            PlacementDriveRepository driveRepository
     ) {
         this.programRepository = programRepository;
         this.studentRepository = studentRepository;
+        this.companyRepository = companyRepository;
+        this.emailCompanyRepository = emailCompanyRepository;
+        this.jobCompanyRepository = jobCompanyRepository;
+        this.driveRepository = driveRepository;
     }
 
     @Override
@@ -44,7 +65,68 @@ public class DataInitializer implements CommandLineRunner {
         log.info("Verifying university canonical academic degree programs in PROGRAM table...");
         seedCanonicalPrograms();
         ensureStudentProgramIds();
+        seedEssentialDemoEntities();
         log.info("Canonical master reference data verified. Database is ready for live operational data.");
+    }
+
+    private void seedEssentialDemoEntities() {
+        // Ensure primary demo student exists
+        if (!studentRepository.existsById("STU001")) {
+            studentRepository.save(new Student(
+                    "STU001",
+                    "Achyut Ranaut",
+                    "achyut.ranaut2025@vitstudent.ac.in",
+                    "VIT Chennai Vandalur – Kelambakkam Road",
+                    "Chennai",
+                    "Tamil Nadu",
+                    LocalDate.of(2003, 4, 15),
+                    BigDecimal.valueOf(9.25),
+                    "Computer Science & Engineering",
+                    "25BCE1799",
+                    "BCE"
+            ));
+            log.info("Initialized primary evaluation student STU001 (Achyut Ranaut / 25BCE1799).");
+        }
+
+        // Ensure primary demo corporate entities exist
+        if (!emailCompanyRepository.existsById("indiarecruiting@microsoft.com")) {
+            emailCompanyRepository.save(new EmailCompany("indiarecruiting@microsoft.com", "Microsoft India"));
+        }
+        if (!companyRepository.existsById("COM004")) {
+            companyRepository.save(new Company("COM004", "indiarecruiting@microsoft.com", "Software Products & Cloud"));
+        }
+        if (!jobCompanyRepository.existsById("Software Development Engineer I")) {
+            jobCompanyRepository.save(new JobCompany("Software Development Engineer I", "COM004"));
+        }
+
+        if (!emailCompanyRepository.existsById("campus@tcs.com")) {
+            emailCompanyRepository.save(new EmailCompany("campus@tcs.com", "Tata Consultancy Services"));
+        }
+        if (!companyRepository.existsById("COM001")) {
+            companyRepository.save(new Company("COM001", "campus@tcs.com", "IT Services & Consulting"));
+        }
+        if (!jobCompanyRepository.existsById("Associate Software Engineer")) {
+            jobCompanyRepository.save(new JobCompany("Associate Software Engineer", "COM001"));
+        }
+
+        // Ensure primary placement drive exists
+        if (!driveRepository.existsById("DRV001")) {
+            PlacementDrive drive = new PlacementDrive(
+                    "DRV001",
+                    "Software Development Engineer I",
+                    BigDecimal.valueOf(8.50),
+                    LocalDate.now().plusDays(20),
+                    LocalDate.now().plusDays(15),
+                    15,
+                    BigDecimal.valueOf(45.00),
+                    "Architect and build scalable distributed cloud systems, high-throughput microservices, and AI-enabled platforms at Microsoft India.",
+                    "Bengaluru / Hyderabad",
+                    "BCE,BCT,BDS",
+                    "Round 1: Online Coding | Round 2: Tech DSA & System Design | Round 3: Fitment"
+            );
+            driveRepository.save(drive);
+            log.info("Initialized primary evaluation placement drive DRV001 (Microsoft SDE I).");
+        }
     }
 
 private void seedCanonicalPrograms() {

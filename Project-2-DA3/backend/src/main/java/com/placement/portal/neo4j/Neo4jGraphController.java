@@ -58,9 +58,17 @@ public class Neo4jGraphController {
 
     @PostMapping("/sync")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Project authoritative Oracle transactional data into Neo4j Aura graph (Admin only)")
+    @Operation(summary = "Project authoritative Oracle transactional data into Neo4j Aura graph with reconciliation (Admin only)")
     public ResponseEntity<ApiResponse<Neo4jProjectionService.ProjectionSummary>> syncFromOracle() {
         Neo4jProjectionService.ProjectionSummary summary = projectionService.syncOracleToNeo4j();
+        return ResponseEntity.ok(ApiResponse.ok(summary.message(), summary));
+    }
+
+    @PostMapping("/reconcile")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Idempotently reconcile Neo4j Aura graph against Oracle source of truth, pruning orphaned nodes and relationships (Admin only)")
+    public ResponseEntity<ApiResponse<Neo4jProjectionService.ProjectionSummary>> reconcileFromOracle() {
+        Neo4jProjectionService.ProjectionSummary summary = projectionService.reconcileGraphWithOracle();
         return ResponseEntity.ok(ApiResponse.ok(summary.message(), summary));
     }
 

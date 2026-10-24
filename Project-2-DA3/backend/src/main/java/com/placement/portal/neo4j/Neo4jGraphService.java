@@ -55,6 +55,7 @@ public class Neo4jGraphService {
                        s.name AS studentName,
                        programName,
                        a.applicationId AS applicationId,
+                       a.status AS applicationStatus,
                        d.driveId AS driveId,
                        d.jobTitle AS jobTitle,
                        companyName,
@@ -74,6 +75,7 @@ public class Neo4jGraphService {
                 dto.setStudentName(getString(r, "studentName"));
                 dto.setProgramName(getString(r, "programName"));
                 dto.setApplicationId(getString(r, "applicationId"));
+                dto.setApplicationStatus(getString(r, "applicationStatus"));
                 dto.setDriveId(getString(r, "driveId"));
                 dto.setJobTitle(getString(r, "jobTitle"));
                 dto.setCompanyName(getString(r, "companyName"));

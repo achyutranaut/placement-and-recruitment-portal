@@ -20,6 +20,7 @@ public class InterviewService {
     private final ApplicationRepository applicationRepository;
     private final ApplicationAuditRepository auditRepository;
     private final ApplicationService applicationService;
+    private final com.placement.portal.neo4j.Neo4jProjectionService projectionService;
 
     public InterviewService(
             InterviewRepository interviewRepository,
@@ -27,7 +28,8 @@ public class InterviewService {
             InterviewJdbcDao interviewJdbcDao,
             ApplicationRepository applicationRepository,
             ApplicationAuditRepository auditRepository,
-            ApplicationService applicationService
+            ApplicationService applicationService,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) com.placement.portal.neo4j.Neo4jProjectionService projectionService
     ) {
         this.interviewRepository = interviewRepository;
         this.roundRepository = roundRepository;
@@ -35,6 +37,7 @@ public class InterviewService {
         this.applicationRepository = applicationRepository;
         this.auditRepository = auditRepository;
         this.applicationService = applicationService;
+        this.projectionService = projectionService;
     }
 
     @Transactional
@@ -120,6 +123,11 @@ public class InterviewService {
                 app.setStatus(newStatus);
                 applicationRepository.save(app);
                 auditRepository.save(new ApplicationAudit(applicationId, oldStatus, newStatus, "INTERVIEWER: " + interviewerName + " (Result: " + normalizedResult + ")"));
+            }
+
+            if (projectionService != null) {
+                projectionService.projectInterview(saved);
+                projectionService.projectApplication(app);
             }
         });
 

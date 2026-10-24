@@ -43,6 +43,7 @@ public class ApplicationService {
     private final InterviewRepository interviewRepository;
     private final InterviewerRoundRepository roundRepository;
     private final OfferRepository offerRepository;
+    private final com.placement.portal.neo4j.Neo4jProjectionService projectionService;
 
     public ApplicationService(
             ApplicationRepository applicationRepository,
@@ -57,7 +58,8 @@ public class ApplicationService {
             PlacementDriveService placementDriveService,
             InterviewRepository interviewRepository,
             InterviewerRoundRepository roundRepository,
-            OfferRepository offerRepository
+            OfferRepository offerRepository,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) com.placement.portal.neo4j.Neo4jProjectionService projectionService
     ) {
         this.applicationRepository = applicationRepository;
         this.dailyRoutineRepository = dailyRoutineRepository;
@@ -72,6 +74,7 @@ public class ApplicationService {
         this.interviewRepository = interviewRepository;
         this.roundRepository = roundRepository;
         this.offerRepository = offerRepository;
+        this.projectionService = projectionService;
     }
 
     @Transactional
@@ -89,6 +92,9 @@ public class ApplicationService {
             if (app.getDriveId() == null) {
                 app.setDriveId(driveId);
                 applicationRepository.save(app);
+            }
+            if (projectionService != null) {
+                projectionService.projectApplication(app);
             }
         });
         return getApplicationById(applicationId);
@@ -272,6 +278,10 @@ public class ApplicationService {
 
         // Record audit entry in real APPLICATION_AUDIT table
         auditRepository.save(new ApplicationAudit(applicationId, oldStatus, newStatus.toUpperCase(), changedBy != null ? changedBy : "RECRUITER"));
+
+        if (projectionService != null) {
+            projectionService.projectApplication(saved);
+        }
 
         return mapToDto(saved);
     }

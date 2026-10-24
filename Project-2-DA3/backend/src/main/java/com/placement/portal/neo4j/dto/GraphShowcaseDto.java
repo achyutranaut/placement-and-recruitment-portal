@@ -48,9 +48,13 @@ public class GraphShowcaseDto {
         private String offerId;
         private BigDecimal ctcLpa;
         private String offerStatus;
+        private String applicationStatus;
         private List<InterviewStepDto> interviewSteps;
 
         public PlacementPathDto() {}
+
+        public String getApplicationStatus() { return applicationStatus; }
+        public void setApplicationStatus(String applicationStatus) { this.applicationStatus = applicationStatus; }
 
         public String getStudentId() { return studentId; }
         public void setStudentId(String studentId) { this.studentId = studentId; }

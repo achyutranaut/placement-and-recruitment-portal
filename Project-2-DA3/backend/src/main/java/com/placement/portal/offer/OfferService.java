@@ -44,6 +44,7 @@ public class OfferService {
     private final com.placement.portal.auth.UserRepository userRepository;
     private final com.placement.portal.company.RecruiterCompanyRepository recruiterCompanyRepository;
     private final ApplicationService applicationService;
+    private final com.placement.portal.neo4j.Neo4jProjectionService projectionService;
 
     public OfferService(
             OfferRepository offerRepository,
@@ -58,7 +59,8 @@ public class OfferService {
             EmailCompanyRepository emailCompanyRepository,
             com.placement.portal.auth.UserRepository userRepository,
             com.placement.portal.company.RecruiterCompanyRepository recruiterCompanyRepository,
-            ApplicationService applicationService
+            ApplicationService applicationService,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) com.placement.portal.neo4j.Neo4jProjectionService projectionService
     ) {
         this.offerRepository = offerRepository;
         this.offerJdbcDao = offerJdbcDao;
@@ -73,6 +75,7 @@ public class OfferService {
         this.userRepository = userRepository;
         this.recruiterCompanyRepository = recruiterCompanyRepository;
         this.applicationService = applicationService;
+        this.projectionService = projectionService;
     }
 
     @Transactional
@@ -165,6 +168,10 @@ public class OfferService {
                 "OFFERED",
                 principal != null ? principal.getName() : "RECRUITER"
         ));
+
+        if (projectionService != null) {
+            offerRepository.findById(offerId).ifPresent(projectionService::projectOffer);
+        }
 
         return getOfferById(offerId);
     }
@@ -271,6 +278,10 @@ public class OfferService {
         // 4. Update student placement status to PLACED
         student.setPlacementStatus("PLACED");
         studentRepository.save(student);
+
+        if (projectionService != null) {
+            projectionService.projectOfferAccepted(offerId, studentId);
+        }
 
         return mapToDto(offer);
     }

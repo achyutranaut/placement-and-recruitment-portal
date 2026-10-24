@@ -620,6 +620,14 @@ export const api = {
     return handleResponse(res);
   },
 
+  async reconcileGraph() {
+    const res = await fetch(`${BASE_URL}/graph/reconcile`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(res);
+  },
+
   async getGraphJourney(studentId) {
     const res = await fetch(`${BASE_URL}/graph/journey/${studentId}`, {
       headers: getAuthHeaders(),
