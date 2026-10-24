@@ -147,12 +147,14 @@ load_env_file() {
 }
 
 # Load files in ascending precedence order:
+load_env_file "/Users/achyutranaut/Desktop/projects/student-placement-recruitment-portal/backend/.env" "original backend/.env"
+load_env_file "$DIR/../.env" "repository root .env"
 load_env_file "$DIR/infrastructure/.env" "infrastructure/.env"
 load_env_file "$DIR/backend/.env" "backend/.env"
-load_env_file "$DIR/.env" "root .env"
+load_env_file "$DIR/.env" "project .env"
 
 if [[ "$DOTENV_LOADED" != "true" ]]; then
-  echo "[i] No .env file detected at project root or backend/. Using default environment configuration."
+  echo "[i] No local .env file detected. Using active environment configuration."
   echo "    To customize local settings: cp .env.example .env"
 fi
 
@@ -243,33 +245,55 @@ if [[ "$ORACLE_USER" =~ ^[cC]## ]]; then
 fi
 export ORACLE_PASSWORD="${ORACLE_PASSWORD:-OraclePassword123!}"
 
-# Neo4j Aura Projection Variables
-export PORTAL_NEO4J_ENABLED="${PORTAL_NEO4J_ENABLED:-false}"
-export NEO4J_URI="${NEO4J_URI:-}"
-export NEO4J_USERNAME="${NEO4J_USERNAME:-neo4j}"
-export NEO4J_PASSWORD="${NEO4J_PASSWORD:-}"
+# Neo4j Projection Helper & Smart Auto-Configuration
+is_neo4j_listening() {
+  local host="${1:-localhost}"
+  local port="${2:-7687}"
+  if command -v nc >/dev/null 2>&1; then
+    nc -z -w 2 "$host" "$port" >/dev/null 2>&1
+  else
+    (echo > "/dev/tcp/$host/$port") >/dev/null 2>&1
+  fi
+}
+
+# Resolve Neo4j dual-database configuration
+if [[ "$FORCE_ORACLE_ONLY" == "true" ]]; then
+  export PORTAL_NEO4J_ENABLED="false"
+  export NEO4J_URI=""
+  export NEO4J_USERNAME=""
+  export NEO4J_PASSWORD=""
+elif [[ -n "$NEO4J_URI" && -n "$NEO4J_PASSWORD" ]]; then
+  # Explicitly configured credentials (e.g. Aura Cloud or custom bolt URI)
+  export PORTAL_NEO4J_ENABLED="true"
+  export NEO4J_USERNAME="${NEO4J_USERNAME:-neo4j}"
+elif is_neo4j_listening "localhost" "7687" || (command -v docker >/dev/null 2>&1 && docker ps --format '{{.Names}}' 2>/dev/null | grep -q 'portal-neo4j'); then
+  # Local Neo4j container or listener detected on port 7687
+  export PORTAL_NEO4J_ENABLED="true"
+  export NEO4J_URI="${NEO4J_URI:-bolt://localhost:7687}"
+  export NEO4J_USERNAME="${NEO4J_USERNAME:-neo4j}"
+  export NEO4J_PASSWORD="${NEO4J_PASSWORD:-placement2026}"
+else
+  # Default to active local Neo4j configuration so Docker container starts with Oracle
+  export PORTAL_NEO4J_ENABLED="${PORTAL_NEO4J_ENABLED:-true}"
+  export NEO4J_URI="${NEO4J_URI:-bolt://localhost:7687}"
+  export NEO4J_USERNAME="${NEO4J_USERNAME:-neo4j}"
+  export NEO4J_PASSWORD="${NEO4J_PASSWORD:-placement2026}"
+fi
 
 # Service Ports
 export SERVER_PORT="${SERVER_PORT:-8080}"
 export FRONTEND_PORT="${FRONTEND_PORT:-3001}"
 export CORS_ALLOWED_ORIGINS="${CORS_ALLOWED_ORIGINS:-http://localhost:${FRONTEND_PORT},http://127.0.0.1:${FRONTEND_PORT},http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173}"
 
-# Evaluate Neo4j Aura Configuration
+# Evaluate Neo4j Configuration
 AURA_STATUS_DESC="Disabled"
 if [[ "$PORTAL_NEO4J_ENABLED" == "true" ]]; then
-  if [[ -z "$NEO4J_URI" || -z "$NEO4J_PASSWORD" ]]; then
-    echo "[!] ERROR: Neo4j Aura is enabled (PORTAL_NEO4J_ENABLED=true) but NEO4J_URI or NEO4J_PASSWORD is not configured."
-    echo "    Please verify that NEO4J_URI and NEO4J_PASSWORD are set in backend/.env or .env."
-    echo "    To start the portal in Oracle-only mode, pass --oracle-only or set PORTAL_NEO4J_ENABLED=false."
-    exit 1
-  fi
-  # Mask credentials from URI if embedded
   SAFE_AURA_URI=$(echo "$NEO4J_URI" | sed -E 's|://.*@|://***@|')
-  AURA_STATUS_DESC="Configured (${SAFE_AURA_URI})"
-  echo "[✓] Neo4j Aura cloud graph projection is ENABLED: $SAFE_AURA_URI"
+  AURA_STATUS_DESC="Active ($SAFE_AURA_URI)"
+  echo "[✓] Neo4j dual-database graph projection is ENABLED: $SAFE_AURA_URI (User: $NEO4J_USERNAME)"
 else
-  echo "[i] Neo4j Aura cloud graph projection: DISABLED (Oracle Database 23ai is primary)."
-  echo "    To connect to live cloud Aura, set PORTAL_NEO4J_ENABLED=true in backend/.env or .env."
+  echo "[i] Neo4j graph projection: DISABLED (Oracle Database 23ai is primary)."
+  echo "    To connect, run with local Neo4j or set credentials in .env."
 fi
 
 # ------------------------------------------------------------------------------
@@ -351,7 +375,19 @@ if [[ "$SHOW_STATUS_ONLY" == "true" ]]; then
   else
     echo "   • Oracle Database 23ai: NOT RUNNING (run ./run_portal.sh to launch container)"
   fi
-  echo "   • Neo4j Aura Projection: $AURA_STATUS_DESC"
+  if [[ "$PORTAL_NEO4J_ENABLED" == "true" ]]; then
+    if [[ "$NEO4J_URI" == *"localhost"* || "$NEO4J_URI" == *"127.0.0.1"* ]]; then
+      if is_neo4j_listening localhost 7687; then
+        echo "   • Neo4j Graph Database: LISTENING (Local bolt://localhost:7687)"
+      else
+        echo "   • Neo4j Graph Database: NOT RUNNING (Local port 7687 closed)"
+      fi
+    else
+      echo "   • Neo4j Graph Database: CONFIGURED (Cloud Aura $SAFE_AURA_URI)"
+    fi
+  else
+    echo "   • Neo4j Graph Database: DISABLED (Run without --oracle-only to enable)"
+  fi
 
   echo "   • Backend Service (Port $SERVER_PORT):"
   B_STATE=$(inspect_port_owner "$SERVER_PORT" "Backend")
@@ -477,8 +513,13 @@ else
     exit 1
   fi
 
-  echo "[*] Starting Oracle Database & Redis containers via infrastructure/docker-compose.yml..."
-  docker compose -f "$DIR/infrastructure/docker-compose.yml" up -d oracle-db redis
+  COMPOSE_SERVICES="oracle-db redis"
+  if [[ "$PORTAL_NEO4J_ENABLED" == "true" && ("$NEO4J_URI" == *"localhost"* || "$NEO4J_URI" == *"127.0.0.1"*) ]]; then
+    COMPOSE_SERVICES="oracle-db redis neo4j"
+  fi
+
+  echo "[*] Starting containers ($COMPOSE_SERVICES) via infrastructure/docker-compose.yml..."
+  docker compose -f "$DIR/infrastructure/docker-compose.yml" up -d $COMPOSE_SERVICES
 
   echo -n "[*] Waiting for Oracle Database 23ai to become healthy"
   ORACLE_READY=false
@@ -502,6 +543,42 @@ else
     exit 1
   fi
   echo "[✓] Oracle Database 23ai is fully operational on $ORACLE_HOST:$ORACLE_PORT."
+fi
+
+# Verify or start Neo4j Database
+if [[ "$PORTAL_NEO4J_ENABLED" == "true" ]]; then
+  if [[ "$NEO4J_URI" == *"localhost"* || "$NEO4J_URI" == *"127.0.0.1"* ]]; then
+    if is_neo4j_listening localhost 7687; then
+      echo "[✓] Neo4j Graph Database listener detected active on bolt://localhost:7687."
+    elif command -v docker >/dev/null 2>&1; then
+      echo "[*] Local Neo4j is not listening on port 7687. Starting container via docker compose..."
+      docker compose -f "$DIR/infrastructure/docker-compose.yml" up -d neo4j
+      echo -n "[*] Waiting for Neo4j Database listener on port 7687"
+      for _ in {1..25}; do
+        if is_neo4j_listening localhost 7687; then
+          echo " ready!"
+          break
+        fi
+        echo -n "."
+        sleep 1
+      done
+      echo ""
+      if is_neo4j_listening localhost 7687; then
+        echo "[✓] Neo4j Graph Database is fully operational on bolt://localhost:7687."
+      else
+        echo "[!] WARNING: Local Neo4j container started but port 7687 not yet accepting connections."
+      fi
+    else
+      echo "[!] WARNING: Local Neo4j is configured on port 7687 but neither port nor Docker is reachable."
+    fi
+  else
+    local_aura_host=$(echo "$NEO4J_URI" | sed -E 's|.*://([^:/]+).*|\1|')
+    if [[ -n "$local_aura_host" ]] && is_neo4j_listening "$local_aura_host" 7687; then
+      echo "[✓] Neo4j Aura cloud graph instance is reachable on $SAFE_AURA_URI."
+    else
+      echo "[i] Neo4j Aura cloud endpoint configured: $SAFE_AURA_URI."
+    fi
+  fi
 fi
 
 # ------------------------------------------------------------------------------
