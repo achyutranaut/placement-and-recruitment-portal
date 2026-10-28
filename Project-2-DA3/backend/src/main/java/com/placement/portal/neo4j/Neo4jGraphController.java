@@ -128,6 +128,63 @@ public class Neo4jGraphController {
         return ResponseEntity.ok(ApiResponse.ok(graphService.getWholeGraph(limit)));
     }
 
+    @PutMapping("/nodes/{nodeType}/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Update node properties directly in Neo4j graph and synchronize with Oracle where applicable (Admin only)")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> updateNode(
+            @PathVariable String nodeType,
+            @PathVariable String id,
+            @RequestBody Map<String, Object> request
+    ) {
+        @SuppressWarnings("unchecked")
+        Map<String, Object> props = request.containsKey("properties") && request.get("properties") instanceof Map
+                ? (Map<String, Object>) request.get("properties")
+                : request;
+        Map<String, Object> result = graphService.updateNode(nodeType, id, props);
+        return ResponseEntity.ok(ApiResponse.ok("Node properties successfully updated.", result));
+    }
+
+    @DeleteMapping("/nodes/{nodeType}/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Delete node and connected relationships from Neo4j graph (Admin only)")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> deleteNode(
+            @PathVariable String nodeType,
+            @PathVariable String id
+    ) {
+        graphService.deleteNode(nodeType, id);
+        return ResponseEntity.ok(ApiResponse.ok("Node [" + id + "] removed from Neo4j graph.", Map.of("id", id, "deleted", true)));
+    }
+
+    @PostMapping("/nodes")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Create custom entity node in Neo4j graph (Admin only)")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> createNode(
+            @RequestBody Map<String, Object> request
+    ) {
+        String label = (String) request.getOrDefault("label", "CustomNode");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> props = request.containsKey("properties") && request.get("properties") instanceof Map
+                ? (Map<String, Object>) request.get("properties")
+                : Map.of();
+        Map<String, Object> result = graphService.createNode(label, props);
+        return ResponseEntity.ok(ApiResponse.ok("Node successfully created in Neo4j graph.", result));
+    }
+
+    @PostMapping("/relationships")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Establish relationship between nodes in Neo4j graph (Admin only)")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> createRelationship(
+            @RequestBody Map<String, Object> request
+    ) {
+        String fromLabel = (String) request.get("fromLabel");
+        String fromId = (String) request.get("fromId");
+        String toLabel = (String) request.get("toLabel");
+        String toId = (String) request.get("toId");
+        String relType = (String) request.getOrDefault("relType", "CONNECTED_TO");
+        Map<String, Object> result = graphService.createRelationship(fromLabel, fromId, toLabel, toId, relType);
+        return ResponseEntity.ok(ApiResponse.ok("Relationship [" + relType + "] established.", result));
+    }
+
     private void validateStudentAccess(Principal principal, String studentId) {
         if (principal == null) {
             throw new AccessDeniedException("Access denied: Unauthenticated.");

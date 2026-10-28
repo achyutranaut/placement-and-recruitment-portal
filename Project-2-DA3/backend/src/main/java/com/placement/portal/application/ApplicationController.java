@@ -128,15 +128,15 @@ public class ApplicationController {
     ) {
         ApplicationDto dto = applicationService.getApplicationById(id);
         if (principal != null) {
-            userRepository.findByUsername(principal.getName()).ifPresent(user -> {
-                if (user.getRole() == Role.ROLE_STUDENT) {
-                    if (user.getReferenceId() == null || !user.getReferenceId().equalsIgnoreCase(dto.getStudentId())) {
-                        throw new AccessDeniedException("Access denied: You may only view your own application records.");
-                    }
-                } else if (user.getRole() == Role.ROLE_RECRUITER) {
-                    recruiterAuthService.requireAuthorizedForApplication(principal, id);
+            PortalUser user = userRepository.findByUsername(principal.getName())
+                    .orElseThrow(() -> new AccessDeniedException("Access denied: User not found."));
+            if (user.getRole() == Role.ROLE_STUDENT) {
+                if (user.getReferenceId() == null || !user.getReferenceId().equalsIgnoreCase(dto.getStudentId())) {
+                    throw new AccessDeniedException("Access denied: You may only view your own application records.");
                 }
-            });
+            } else if (user.getRole() == Role.ROLE_RECRUITER) {
+                recruiterAuthService.requireAuthorizedForApplication(principal, id);
+            }
         }
         return ResponseEntity.ok(ApiResponse.ok(dto));
     }
@@ -150,15 +150,15 @@ public class ApplicationController {
     ) {
         ApplicationDto dto = applicationService.getApplicationById(id);
         if (principal != null) {
-            userRepository.findByUsername(principal.getName()).ifPresent(user -> {
-                if (user.getRole() == Role.ROLE_STUDENT) {
-                    if (user.getReferenceId() == null || !user.getReferenceId().equalsIgnoreCase(dto.getStudentId())) {
-                        throw new AccessDeniedException("Access denied: You may only view your own evaluation scores.");
-                    }
-                } else if (user.getRole() == Role.ROLE_RECRUITER) {
-                    recruiterAuthService.requireAuthorizedForApplication(principal, id);
+            PortalUser user = userRepository.findByUsername(principal.getName())
+                    .orElseThrow(() -> new AccessDeniedException("Access denied: User not found."));
+            if (user.getRole() == Role.ROLE_STUDENT) {
+                if (user.getReferenceId() == null || !user.getReferenceId().equalsIgnoreCase(dto.getStudentId())) {
+                    throw new AccessDeniedException("Access denied: You may only view your own evaluation scores.");
                 }
-            });
+            } else if (user.getRole() == Role.ROLE_RECRUITER) {
+                recruiterAuthService.requireAuthorizedForApplication(principal, id);
+            }
         }
         return ResponseEntity.ok(ApiResponse.ok(dto.getScores()));
     }

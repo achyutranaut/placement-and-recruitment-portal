@@ -129,17 +129,9 @@ public class DataInitializer implements CommandLineRunner {
         }
     }
 
-private void seedCanonicalPrograms() {
+    private void seedCanonicalPrograms() {
         // Ensure legacy references exist for foreign-key compatibility
-        List<Program> legacyPrograms = List.of(
-                new Program("BCE", "Computer Science & Engineering", BigDecimal.ZERO, "4 Years", "Y", "N", "N", "Legacy", "Computer Science", null, "^2[0-9]BCE[0-9]{4}$", "21BCE1234", "N"),
-                new Program("BCT", "Information Technology", BigDecimal.ZERO, "4 Years", "Y", "N", "N", "Legacy", "Information Technology", null, "^2[0-9]BCT[0-9]{4}$", "21BCT1234", "N"),
-                new Program("BEC", "Electronics & Communication", BigDecimal.ZERO, "4 Years", "Y", "N", "N", "Legacy", "Electronics", null, "^2[0-9]BEC[0-9]{4}$", "21BEC1234", "N"),
-                new Program("BME", "Mechanical Engineering", BigDecimal.ZERO, "4 Years", "Y", "N", "N", "Legacy", "Mechanical", null, "^2[0-9]BME[0-9]{4}$", "21BME1234", "N"),
-                new Program("BDS", "Data Science", BigDecimal.ZERO, "4 Years", "Y", "N", "N", "Legacy", "Computer Science", "Data Science", "^2[0-9]BCE[0-9]{4}$", "21BCE1234", "N"),
-                new Program("BEE", "Electrical & Electronics Engineering", BigDecimal.ZERO, "4 Years", "Y", "N", "N", "Legacy", "Electrical", null, "^2[0-9]BEE[0-9]{4}$", "21BEE1234", "N"),
-                new Program("BCV", "Civil Engineering", BigDecimal.ZERO, "4 Years", "Y", "N", "N", "Legacy", "Civil", null, "^2[0-9]BCV[0-9]{4}$", "21BCV1234", "N")
-        );
+        List<Program> legacyPrograms = getLegacyPrograms();
         for (Program p : legacyPrograms) {
             if (!programRepository.existsById(p.getProgramId())) {
                 programRepository.save(p);
@@ -156,7 +148,19 @@ private void seedCanonicalPrograms() {
         log.info("Verified all {} institutional degree programs in PROGRAM table.", catalog.size());
     }
 
-    private List<Program> getFullCatalog() {
+    public static List<Program> getLegacyPrograms() {
+        return List.of(
+                new Program("BCE", "Computer Science & Engineering", BigDecimal.ZERO, "4 Years", "Y", "N", "N", "Legacy", "Computer Science", null, "^2[0-9]BCE[0-9]{4}$", "21BCE1234", "N"),
+                new Program("BCT", "Information Technology", BigDecimal.ZERO, "4 Years", "Y", "N", "N", "Legacy", "Information Technology", null, "^2[0-9]BCT[0-9]{4}$", "21BCT1234", "N"),
+                new Program("BEC", "Electronics & Communication", BigDecimal.ZERO, "4 Years", "Y", "N", "N", "Legacy", "Electronics", null, "^2[0-9]BEC[0-9]{4}$", "21BEC1234", "N"),
+                new Program("BME", "Mechanical Engineering", BigDecimal.ZERO, "4 Years", "Y", "N", "N", "Legacy", "Mechanical", null, "^2[0-9]BME[0-9]{4}$", "21BME1234", "N"),
+                new Program("BDS", "Data Science", BigDecimal.ZERO, "4 Years", "Y", "N", "N", "Legacy", "Computer Science", "Data Science", "^2[0-9]BCE[0-9]{4}$", "21BCE1234", "N"),
+                new Program("BEE", "Electrical & Electronics Engineering", BigDecimal.ZERO, "4 Years", "Y", "N", "N", "Legacy", "Electrical", null, "^2[0-9]BEE[0-9]{4}$", "21BEE1234", "N"),
+                new Program("BCV", "Civil Engineering", BigDecimal.ZERO, "4 Years", "Y", "N", "N", "Legacy", "Civil", null, "^2[0-9]BCV[0-9]{4}$", "21BCV1234", "N")
+        );
+    }
+
+    public static List<Program> getFullCatalog() {
         return List.of(
             new Program("BTECH-CSE", "B.Tech CSE", BigDecimal.ZERO, "4 Years", "Y", "N", "N", "Bachelor's", "Computer Science", null, "^2[0-9]BCE[0-9]{4}$", "21BCE1234", "Y"),
             new Program("BTECH-CSE-AIML", "B.Tech CSE (AI & ML)", BigDecimal.ZERO, "4 Years", "Y", "N", "N", "Bachelor's", "Computer Science", "AI & ML", "^2[0-9]BCE[0-9]{4}$", "21BCE1234", "Y"),

@@ -70,12 +70,7 @@ public class ReportService {
 
     public PlacementStatsDto getPlacementSummary() {
         long totalStudents = studentRepository.count();
-        long eligibleStudents = applicationRepository.findAll().stream()
-                .map(Application::getStudentId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .filter(studentRepository::existsById)
-                .count();
+        long eligibleStudents = calculateEligibleStudents();
         long totalCompanies = companyRepository.count();
         long activeDrives = driveRepository.count();
         long totalApps = applicationRepository.count();
@@ -85,6 +80,7 @@ public class ReportService {
         Double avgPkg = reportJdbcDao.getAveragePackage(null);
 
         double maxPkg = offerRepository.findAll().stream()
+                .filter(o -> o.getStatus() == null || !"DECLINED".equalsIgnoreCase(o.getStatus()))
                 .map(OfferLetter::getCtcLpa)
                 .filter(Objects::nonNull)
                 .mapToDouble(BigDecimal::doubleValue)
@@ -108,12 +104,7 @@ public class ReportService {
 
     public OverviewReportDto getOverviewReport() {
         long totalStudents = studentRepository.count();
-        long eligibleStudents = applicationRepository.findAll().stream()
-                .map(Application::getStudentId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .filter(studentRepository::existsById)
-                .count();
+        long eligibleStudents = calculateEligibleStudents();
         long totalCompanies = companyRepository.count();
         long activeDrives = driveRepository.count();
         long totalApps = applicationRepository.count();
@@ -125,15 +116,19 @@ public class ReportService {
         Double avgPkg = reportJdbcDao.getAveragePackage(null);
 
         List<OfferLetter> allOffers = offerRepository.findAll();
-        double maxPkg = allOffers.stream()
+        List<OfferLetter> validOffers = allOffers.stream()
+                .filter(o -> o.getStatus() == null || !"DECLINED".equalsIgnoreCase(o.getStatus()))
+                .toList();
+
+        double maxPkg = validOffers.stream()
                 .map(OfferLetter::getCtcLpa)
                 .filter(Objects::nonNull)
                 .mapToDouble(BigDecimal::doubleValue)
                 .max().orElse(0.0);
 
-        // Calculate unique students placed
+        // Calculate unique students placed (candidates with accepted or issued placement offers)
         Set<String> placedStudentIds = new HashSet<>();
-        for (OfferLetter o : allOffers) {
+        for (OfferLetter o : validOffers) {
             applicationRepository.findById(o.getApplicationId()).ifPresent(a -> placedStudentIds.add(a.getStudentId()));
         }
         long uniqueStudentsPlaced = placedStudentIds.size();
@@ -142,12 +137,11 @@ public class ReportService {
         Map<String, Long> statusCounts = reportJdbcDao.getApplicationStatusCounts();
         totalApps = statusCounts.values().stream().mapToLong(Long::longValue).sum();
 
-
         // CTC distribution
-        long superDream = allOffers.stream().filter(o -> o.getCtcLpa() != null && o.getCtcLpa().doubleValue() >= 20.0).count();
-        long dream = allOffers.stream().filter(o -> o.getCtcLpa() != null && o.getCtcLpa().doubleValue() >= 10.0 && o.getCtcLpa().doubleValue() < 20.0).count();
-        long regular = allOffers.stream().filter(o -> o.getCtcLpa() != null && o.getCtcLpa().doubleValue() < 10.0).count();
-        long offerTotal = Math.max(totalOffers, 1);
+        long superDream = validOffers.stream().filter(o -> o.getCtcLpa() != null && o.getCtcLpa().doubleValue() >= 20.0).count();
+        long dream = validOffers.stream().filter(o -> o.getCtcLpa() != null && o.getCtcLpa().doubleValue() >= 10.0 && o.getCtcLpa().doubleValue() < 20.0).count();
+        long regular = validOffers.stream().filter(o -> o.getCtcLpa() != null && o.getCtcLpa().doubleValue() < 10.0).count();
+        long offerTotal = Math.max(validOffers.size(), 1);
 
         List<OverviewReportDto.CtcTierStat> ctcDistribution = List.of(
                 new OverviewReportDto.CtcTierStat("Super Dream (≥ 20 LPA)", superDream, Math.round((double) superDream / offerTotal * 100.0)),
@@ -257,15 +251,19 @@ public class ReportService {
             List<OfferLetter> compOffers = allOffers.stream().filter(o -> cId.equals(appIdToCompanyId.get(o.getApplicationId()))).toList();
             long offersCount = compOffers.size();
 
+            List<OfferLetter> validCompOffers = compOffers.stream()
+                    .filter(o -> o.getStatus() == null || !"DECLINED".equalsIgnoreCase(o.getStatus()))
+                    .toList();
+
             Set<String> compPlacedStudents = new HashSet<>();
-            for (OfferLetter o : compOffers) {
+            for (OfferLetter o : validCompOffers) {
                 applicationRepository.findById(o.getApplicationId()).ifPresent(a -> compPlacedStudents.add(a.getStudentId()));
             }
             long placedCount = compPlacedStudents.size();
 
             double convRate = appsCount > 0 ? Math.round(((double) placedCount / appsCount * 100.0) * 10.0) / 10.0 : 0.0;
-            double avgCtc = compOffers.stream().map(OfferLetter::getCtcLpa).mapToDouble(BigDecimal::doubleValue).average().orElse(0.0);
-            double maxCtc = compOffers.stream().map(OfferLetter::getCtcLpa).mapToDouble(BigDecimal::doubleValue).max().orElse(0.0);
+            double avgCtc = validCompOffers.stream().map(OfferLetter::getCtcLpa).mapToDouble(BigDecimal::doubleValue).average().orElse(0.0);
+            double maxCtc = validCompOffers.stream().map(OfferLetter::getCtcLpa).mapToDouble(BigDecimal::doubleValue).max().orElse(0.0);
 
             companyAnalytics.add(new OverviewReportDto.CompanyPlacementAnalyticsDto(
                     cName,
@@ -319,5 +317,22 @@ public class ReportService {
         }
 
         return list;
+    }
+
+    private long calculateEligibleStudents() {
+        BigDecimal minDriveCgpa = driveRepository.findAll().stream()
+                .map(PlacementDrive::getMinCgpa)
+                .filter(Objects::nonNull)
+                .min(BigDecimal::compareTo)
+                .orElse(BigDecimal.valueOf(6.50));
+
+        Set<String> applicantStudentIds = applicationRepository.findAll().stream()
+                .map(Application::getStudentId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        return studentRepository.findAll().stream()
+                .filter(s -> (s.getCgpa() != null && s.getCgpa().compareTo(minDriveCgpa) >= 0) || applicantStudentIds.contains(s.getStudentId()))
+                .count();
     }
 }

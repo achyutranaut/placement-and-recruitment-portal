@@ -85,6 +85,27 @@ export default function StudentPortal() {
     };
   }, [studentId]);
 
+  const handleDeclineOffer = async (offer) => {
+    if (!window.confirm(`Are you sure you want to decline the employment offer from ${offer.companyName || 'this company'}? This action cannot be reversed.`)) {
+      return;
+    }
+    try {
+      await api.declineOffer(offer.offerId);
+      setNotification({
+        type: 'info',
+        title: 'Offer Declined',
+        message: `You have declined the offer from ${offer.companyName || 'the company'}.`,
+      });
+      await loadData();
+    } catch (err) {
+      setNotification({
+        type: 'error',
+        title: 'Decline Failed',
+        message: err.message || 'Unable to decline offer.',
+      });
+    }
+  };
+
   const handleApply = async (drive) => {
     setApplyingDriveId(drive.driveId);
     setNotification(null);
@@ -421,6 +442,13 @@ export default function StudentPortal() {
                   </button>
                   <button
                     type="button"
+                    onClick={() => handleDeclineOffer(offer)}
+                    className="px-3 py-1.5 rounded border border-rose-200 hover:bg-rose-50 text-rose-700 font-semibold text-xs transition-colors"
+                  >
+                    Decline
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setConfirmAcceptOffer(offer)}
                     className="flex-1 px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs transition-colors shadow-sm"
                   >
@@ -462,6 +490,13 @@ export default function StudentPortal() {
                 className="px-3.5 py-1.5 rounded border border-slate-300 hover:bg-white text-slate-700 font-semibold text-xs transition-colors"
               >
                 View Letter
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeclineOffer(activeOffers[0])}
+                className="px-3 py-1.5 rounded border border-rose-200 hover:bg-rose-50 text-rose-700 font-semibold text-xs transition-colors"
+              >
+                Decline
               </button>
               <button
                 type="button"

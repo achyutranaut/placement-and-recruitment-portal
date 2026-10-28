@@ -1,5 +1,7 @@
 package com.placement.portal.offer;
 
+import com.placement.portal.auth.PortalUser;
+import com.placement.portal.auth.PortalUser;
 import com.placement.portal.auth.Role;
 import com.placement.portal.auth.UserRepository;
 import com.placement.portal.common.ApiResponse;
@@ -117,6 +119,15 @@ public class OfferController {
         return ResponseEntity.ok(ApiResponse.ok("Placement offer accepted successfully. Placement status finalized.", accepted));
     }
 
+    @PostMapping("/{id}/decline")
+    @PreAuthorize("hasRole('STUDENT')")
+    @Operation(summary = "Decline an employment offer")
+    public ResponseEntity<ApiResponse<OfferDto>> declineOffer(@PathVariable String id, Principal principal) {
+        String studentId = resolveStudentId(principal);
+        OfferDto declined = offerService.declineOffer(id, studentId);
+        return ResponseEntity.ok(ApiResponse.ok("Placement offer declined successfully.", declined));
+    }
+
     @GetMapping("/student/{studentId}")
     @PreAuthorize("hasAnyRole('STUDENT', 'ADMIN')")
     @Operation(summary = "Get offers awarded to a student")
@@ -162,34 +173,34 @@ public class OfferController {
 
     private void validateOfferAccess(OfferDto offer, Principal principal) {
         if (principal == null) return;
-        userRepository.findByUsername(principal.getName()).ifPresent(user -> {
-            if (user.getRole() == Role.ROLE_STUDENT) {
-                String refId = user.getReferenceId();
-                if (refId == null || !refId.equalsIgnoreCase(offer.getStudentId())) {
-                    throw new AccessDeniedException(
-                            "Access denied: Students may only access their own offer letters."
-                    );
-                }
-            } else if (user.getRole() == Role.ROLE_RECRUITER) {
-                recruiterAuthService.requireAuthorizedForApplication(principal, offer.getApplicationId());
+        PortalUser user = userRepository.findByUsername(principal.getName())
+                .orElseThrow(() -> new AccessDeniedException("Access denied: User not found."));
+        if (user.getRole() == Role.ROLE_STUDENT) {
+            String refId = user.getReferenceId();
+            if (refId == null || !refId.equalsIgnoreCase(offer.getStudentId())) {
+                throw new AccessDeniedException(
+                        "Access denied: Students may only access their own offer letters."
+                );
             }
-        });
+        } else if (user.getRole() == Role.ROLE_RECRUITER) {
+            recruiterAuthService.requireAuthorizedForApplication(principal, offer.getApplicationId());
+        }
     }
 
     private void validateStudentAccess(String studentId, Principal principal) {
         if (principal == null) return;
-        userRepository.findByUsername(principal.getName()).ifPresent(user -> {
-            if (user.getRole() == Role.ROLE_STUDENT) {
-                String refId = user.getReferenceId();
-                if (refId == null || !refId.equalsIgnoreCase(studentId)) {
-                    throw new AccessDeniedException(
-                            "Access denied: Students may only access their own offer records."
-                    );
-                }
-            } else if (user.getRole() == Role.ROLE_RECRUITER) {
-                recruiterAuthService.requireAuthorizedForStudent(principal, studentId);
+        PortalUser user = userRepository.findByUsername(principal.getName())
+                .orElseThrow(() -> new AccessDeniedException("Access denied: User not found."));
+        if (user.getRole() == Role.ROLE_STUDENT) {
+            String refId = user.getReferenceId();
+            if (refId == null || !refId.equalsIgnoreCase(studentId)) {
+                throw new AccessDeniedException(
+                        "Access denied: Students may only access their own offer records."
+                );
             }
-        });
+        } else if (user.getRole() == Role.ROLE_RECRUITER) {
+            recruiterAuthService.requireAuthorizedForStudent(principal, studentId);
+        }
     }
 
     private String resolveStudentId(Principal principal) {

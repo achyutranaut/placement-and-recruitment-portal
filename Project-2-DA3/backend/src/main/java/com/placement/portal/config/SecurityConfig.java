@@ -93,6 +93,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/graph/elements").hasRole("ADMIN")
                         .requestMatchers("/api/v1/graph/sync", "/api/v1/graph/reconnect").hasRole("ADMIN")
                         .requestMatchers("/api/v1/graph/**").hasAnyRole("STUDENT", "RECRUITER", "ADMIN")
+                        .requestMatchers("/api/v1/semantic-search/index", "/api/v1/semantic-search/reconnect").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/semantic-search/**").hasAnyRole("STUDENT", "RECRUITER", "ADMIN")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

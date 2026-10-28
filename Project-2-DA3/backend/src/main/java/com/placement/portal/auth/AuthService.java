@@ -302,12 +302,14 @@ public class AuthService {
                 regNo.toLowerCase(),
                 passwordEncoder.encode(request.getPassword()),
                 Role.ROLE_STUDENT,
-                studentId
+                studentId,
+                request.getName().trim(),
+                email
         );
         userRepository.save(portalUser);
 
         String token = tokenProvider.generateToken(portalUser.getUsername(), portalUser.getRole().name(), portalUser.getReferenceId());
-        return new AuthResponse(token, portalUser.getUsername(), portalUser.getRole().name(), portalUser.getReferenceId());
+        return new AuthResponse(token, portalUser.getUsername(), portalUser.getRole().name(), portalUser.getReferenceId(), portalUser.getFullName(), portalUser.getEmail());
     }
 
     private void validateRegistrationNoForProgram(Program program, String regNo) {
@@ -352,18 +354,30 @@ public class AuthService {
             assignedReferenceId = refId;
         }
 
+        String fullName = null;
+        String email = null;
+        if (assignedReferenceId != null) {
+            var stuOpt = studentRepository.findById(assignedReferenceId);
+            if (stuOpt.isPresent()) {
+                fullName = stuOpt.get().getName();
+                email = stuOpt.get().getEmail();
+            }
+        }
+
         PortalUser user = new PortalUser(
                 "USR_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(),
                 request.getUsername(),
                 passwordEncoder.encode(request.getPassword()),
                 assignedRole,
-                assignedReferenceId
+                assignedReferenceId,
+                fullName,
+                email
         );
 
         userRepository.save(user);
 
         String token = tokenProvider.generateToken(user.getUsername(), user.getRole().name(), user.getReferenceId());
-        return new AuthResponse(token, user.getUsername(), user.getRole().name(), user.getReferenceId());
+        return new AuthResponse(token, user.getUsername(), user.getRole().name(), user.getReferenceId(), user.getFullName(), user.getEmail());
     }
 
     @Transactional

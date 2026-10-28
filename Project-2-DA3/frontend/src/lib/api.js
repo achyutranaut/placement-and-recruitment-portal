@@ -421,6 +421,8 @@ export const api = {
 
   // Schedule Interview (executes Oracle PL/SQL SCHEDULE_INTERVIEW)
   async scheduleInterview({ applicationId, interviewerName, oa, gd, hr, result, online, offline }) {
+    const isOnline = online === true || online === 'Y' || online === 'true';
+    const isOffline = offline === true || offline === 'Y' || offline === 'true';
     const res = await fetch(`${BASE_URL}/interviews/schedule`, {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -431,8 +433,8 @@ export const api = {
         gd: gd ? 'Y' : 'N',
         hr: hr ? 'Y' : 'N',
         result: result || 'PENDING',
-        online: online ? 'Y' : 'N',
-        offline: offline ? 'Y' : 'N',
+        online: isOnline ? 'Y' : 'N',
+        offline: isOffline ? 'Y' : (isOnline ? 'N' : 'Y'),
       }),
     });
     return handleResponse(res);
@@ -462,6 +464,14 @@ export const api = {
 
   async acceptOffer(offerId) {
     const res = await fetch(`${BASE_URL}/offers/${offerId}/accept`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(res);
+  },
+
+  async declineOffer(offerId) {
+    const res = await fetch(`${BASE_URL}/offers/${offerId}/decline`, {
       method: 'POST',
       headers: getAuthHeaders(),
     });
@@ -669,21 +679,40 @@ export const api = {
     return handleResponse(res);
   },
 
-  // Guard against direct graph mutation - Oracle is source of truth
-  async createGraphEntity() {
-    throw new Error('Direct graph mutations are restricted. Oracle Database 23ai is the primary transactional source of truth. Mutations must be performed via portal and synchronized to Neo4j.');
+  // Neo4j Graph Mutations (Admin only)
+  async createGraphEntity(label, properties) {
+    const res = await fetch(`${BASE_URL}/graph/nodes`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ label, properties }),
+    });
+    return handleResponse(res);
   },
 
-  async createGraphRelationship() {
-    throw new Error('Direct graph mutations are restricted. Oracle Database 23ai is the primary transactional source of truth. Mutations must be performed via portal and synchronized to Neo4j.');
+  async createGraphRelationship(fromLabel, fromId, toLabel, toId, relType) {
+    const res = await fetch(`${BASE_URL}/graph/relationships`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ fromLabel, fromId, toLabel, toId, relType }),
+    });
+    return handleResponse(res);
   },
 
-  async deleteGraphEntity() {
-    throw new Error('Direct graph mutations are restricted. Oracle Database 23ai is the primary transactional source of truth.');
+  async deleteGraphEntity(nodeType, id) {
+    const res = await fetch(`${BASE_URL}/graph/nodes/${encodeURIComponent(nodeType)}/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(res);
   },
 
-  async updateGraphEntity() {
-    throw new Error('Direct graph mutations are restricted. Oracle Database 23ai is the primary transactional source of truth.');
+  async updateGraphEntity(nodeType, id, properties) {
+    const res = await fetch(`${BASE_URL}/graph/nodes/${encodeURIComponent(nodeType)}/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ properties }),
+    });
+    return handleResponse(res);
   },
 
   // Dedicated Neo4j Cypher Compiler APIs
@@ -712,6 +741,39 @@ export const api = {
 
   async getCypherConnectionInfo() {
     const res = await fetch(`${BASE_URL}/admin/cypher/connection-info`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(res);
+  },
+
+  // Qdrant Vector Database Semantic Search APIs
+  async getSemanticSearchStatus() {
+    const res = await fetch(`${BASE_URL}/semantic-search/status`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(res);
+  },
+
+  async executeSemanticSearch({ query, entityType = 'ALL', limit = 10, minScore = 0.2 }) {
+    const res = await fetch(`${BASE_URL}/semantic-search`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ query, entityType, limit, minScore }),
+    });
+    return handleResponse(res);
+  },
+
+  async reindexSemanticSearch() {
+    const res = await fetch(`${BASE_URL}/semantic-search/index`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(res);
+  },
+
+  async reconnectQdrant() {
+    const res = await fetch(`${BASE_URL}/semantic-search/reconnect`, {
+      method: 'POST',
       headers: getAuthHeaders(),
     });
     return handleResponse(res);

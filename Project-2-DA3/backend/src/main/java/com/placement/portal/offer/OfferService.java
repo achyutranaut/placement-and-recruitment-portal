@@ -286,6 +286,69 @@ public class OfferService {
         return mapToDto(offer);
     }
 
+    /**
+     * Declines a specific employment offer for an authenticated student.
+     * 1. Acquires pessimistic write lock on Student row
+     * 2. Verifies student ownership
+     * 3. Verifies offer is currently in OFFERED state
+     * 4. Updates offer to DECLINED
+     * 5. Updates application to DECLINED
+     * 6. Recalculates student placement status
+     * 7. Logs audit trail in APPLICATION_AUDIT
+     * 8. Synchronizes projection to Neo4j
+     */
+    @Transactional
+    public OfferDto declineOffer(String offerId, String studentId) {
+        Student student = studentRepository.findByIdWithLock(studentId)
+                .orElseThrow(() -> new IllegalArgumentException("Student not found: " + studentId));
+
+        OfferLetter offer = offerRepository.findById(offerId)
+                .orElseThrow(() -> new IllegalArgumentException("Offer not found: " + offerId));
+
+        Application app = applicationRepository.findById(offer.getApplicationId())
+                .orElseThrow(() -> new IllegalStateException("Application record not found for offer: " + offerId));
+
+        if (!app.getStudentId().equalsIgnoreCase(studentId)) {
+            throw new AccessDeniedException("Access denied: You may only decline offers awarded directly to your student profile.");
+        }
+
+        if (!"OFFERED".equalsIgnoreCase(offer.getStatus())) {
+            throw new IllegalStateException("Offer " + offerId + " cannot be declined because its status is '" + offer.getStatus() + "'.");
+        }
+
+        // 1. Mark this offer as DECLINED
+        offer.setStatus("DECLINED");
+        offerRepository.save(offer);
+
+        // 2. Mark this application as DECLINED
+        String oldAppStatus = app.getStatus();
+        app.setStatus("DECLINED");
+        applicationRepository.save(app);
+        auditRepository.save(new ApplicationAudit(app.getApplicationId(), oldAppStatus, "DECLINED", "STUDENT: " + studentId));
+
+        // 3. Re-evaluate student's placement status if they are not already PLACED
+        if (!"PLACED".equalsIgnoreCase(student.getPlacementStatus())) {
+            List<String> appIds = applicationRepository.findByStudentId(studentId).stream()
+                    .map(Application::getApplicationId)
+                    .toList();
+            List<OfferLetter> remainingOffers = appIds.isEmpty() ? java.util.Collections.emptyList() : offerRepository.findByApplicationIdIn(appIds);
+            boolean hasOtherOffered = remainingOffers.stream()
+                    .anyMatch(o -> !o.getOfferId().equalsIgnoreCase(offerId) && "OFFERED".equalsIgnoreCase(o.getStatus()));
+            if (hasOtherOffered) {
+                student.setPlacementStatus("OFFERED");
+            } else {
+                student.setPlacementStatus("NOT_PLACED");
+            }
+            studentRepository.save(student);
+        }
+
+        if (projectionService != null) {
+            projectionService.projectOfferDeclined(offerId, studentId);
+        }
+
+        return mapToDto(offer);
+    }
+
     private List<OfferDto> mapToDtoList(List<OfferLetter> offers) {
         if (offers == null || offers.isEmpty()) {
             return java.util.Collections.emptyList();

@@ -277,4 +277,56 @@ public class PlacementStateMachineTests {
         );
         assertTrue(ex.getMessage().contains("Candidate must be in SELECTED state to receive an offer"));
     }
+
+    @Test
+    @DisplayName("CASE 10: Declining an active offer transitions offer and application to DECLINED")
+    void testCase10_DeclineOffer_Success() {
+        String appId = "APP_SM_CASE10";
+        Application app = new Application(appId, "STU001", "DRV001", LocalDate.now(), "OFFERED");
+        applicationRepository.save(app);
+
+        OfferLetter offer = new OfferLetter("OFF_TEST_DEC", appId, LocalDate.now(), BigDecimal.valueOf(18.0), "OFFERED");
+        offerRepository.save(offer);
+
+        OfferDto result = offerService.declineOffer("OFF_TEST_DEC", "STU001");
+        assertNotNull(result);
+        assertEquals("DECLINED", result.getStatus());
+
+        OfferLetter updatedOffer = offerRepository.findById("OFF_TEST_DEC").orElseThrow();
+        assertEquals("DECLINED", updatedOffer.getStatus());
+
+        Application updatedApp = applicationRepository.findById(appId).orElseThrow();
+        assertEquals("DECLINED", updatedApp.getStatus());
+    }
+
+    @Test
+    @DisplayName("CASE 11: Declining an offer belonging to another student is blocked")
+    void testCase11_DeclineOffer_UnauthorizedStudent_Blocked() {
+        String appId = "APP_SM_CASE11";
+        Application app = new Application(appId, "STU002", "DRV001", LocalDate.now(), "OFFERED");
+        applicationRepository.save(app);
+
+        OfferLetter offer = new OfferLetter("OFF_TEST_DEC2", appId, LocalDate.now(), BigDecimal.valueOf(20.0), "OFFERED");
+        offerRepository.save(offer);
+
+        assertThrows(org.springframework.security.access.AccessDeniedException.class, () ->
+                offerService.declineOffer("OFF_TEST_DEC2", "STU001")
+        );
+    }
+
+    @Test
+    @DisplayName("CASE 12: Declining an already accepted offer is blocked")
+    void testCase12_DeclineOffer_AlreadyAccepted_Blocked() {
+        String appId = "APP_SM_CASE12";
+        Application app = new Application(appId, "STU001", "DRV001", LocalDate.now(), "ACCEPTED");
+        applicationRepository.save(app);
+
+        OfferLetter offer = new OfferLetter("OFF_TEST_DEC3", appId, LocalDate.now(), BigDecimal.valueOf(20.0), "ACCEPTED");
+        offerRepository.save(offer);
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                offerService.declineOffer("OFF_TEST_DEC3", "STU001")
+        );
+        assertTrue(ex.getMessage().contains("cannot be declined"));
+    }
 }

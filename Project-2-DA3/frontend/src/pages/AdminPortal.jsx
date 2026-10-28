@@ -146,7 +146,10 @@ export default function AdminPortal() {
       channel.onmessage = () => {
         handleMutation();
       };
-    } catch (_) {}
+    } catch (err) {
+      // BroadcastChannel unsupported or restricted in this environment
+      console.debug("BroadcastChannel not supported:", err);
+    }
 
     return () => {
       window.removeEventListener("portal:database-mutation", handleMutation);

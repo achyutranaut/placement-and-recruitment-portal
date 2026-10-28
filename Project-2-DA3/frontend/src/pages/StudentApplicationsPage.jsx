@@ -82,6 +82,27 @@ export default function StudentApplicationsPage() {
     };
   }, [studentId]);
 
+  const handleDeclineOffer = async (offer) => {
+    if (!window.confirm(`Are you sure you want to decline the employment offer from ${offer.companyName || 'this company'}? This action cannot be reversed.`)) {
+      return;
+    }
+    try {
+      await api.declineOffer(offer.offerId);
+      setActionMessage({
+        type: 'info',
+        title: 'Offer Declined',
+        message: `You have declined the offer from ${offer.companyName || 'the company'}.`,
+      });
+      await loadData();
+    } catch (err) {
+      setActionMessage({
+        type: 'error',
+        title: 'Decline Failed',
+        message: err.message || 'Unable to decline offer.',
+      });
+    }
+  };
+
 
   const pipelineStages = [
     { key: 'APPLIED', label: '1. Applied' },
@@ -280,12 +301,20 @@ export default function StudentApplicationsPage() {
                         <Award className="w-3.5 h-3.5" /> View Offer Letter
                       </button>
                       {offer.status === 'OFFERED' && (
-                        <button
-                          onClick={() => setConfirmAcceptOffer(offer)}
-                          className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold transition-colors shadow-sm"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Accept Offer
-                        </button>
+                        <>
+                          <button
+                            onClick={() => handleDeclineOffer(offer)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-rose-200 hover:bg-rose-50 text-rose-700 rounded text-xs font-semibold transition-colors shadow-xs"
+                          >
+                            Decline
+                          </button>
+                          <button
+                            onClick={() => setConfirmAcceptOffer(offer)}
+                            className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold transition-colors shadow-sm"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Accept Offer
+                          </button>
+                        </>
                       )}
                       {offer.status === 'ACCEPTED' && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded text-xs font-bold">

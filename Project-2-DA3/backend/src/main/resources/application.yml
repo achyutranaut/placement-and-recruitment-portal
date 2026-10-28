@@ -49,14 +49,28 @@ cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3001,http://127.0.0.1:3001,http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173}
 
 portal:
+  demo-data:
+    enabled: ${PORTAL_DEMO_DATA_ENABLED:false}
   security:
     admin:
       bootstrap-enabled: ${ADMIN_BOOTSTRAP_ENABLED:false}
       bootstrap-password: ${ADMIN_BOOTSTRAP_PASSWORD:}
   neo4j:
     enabled: ${PORTAL_NEO4J_ENABLED:false}
-    uri: ${NEO4J_URI:neo4j+s://demo.databases.neo4j.io}
-    username: ${NEO4J_USERNAME:neo4j}
+    uri: ${NEO4J_URI:}
+    username: ${NEO4J_USERNAME:}
     password: ${NEO4J_PASSWORD:}
+  qdrant:
+    enabled: ${PORTAL_QDRANT_ENABLED:false}
+    url: ${QDRANT_URL:http://localhost:6333}
+    api-key: ${QDRANT_API_KEY:}
+    collection: ${QDRANT_COLLECTION:placement-semantic-search}
+    dimension: ${QDRANT_DIMENSION:384}
+  embedding:
+    provider: ${PORTAL_EMBEDDING_PROVIDER:local}
+    model: ${PORTAL_EMBEDDING_MODEL:recruitment-semantic-v1}
+    api-url: ${PORTAL_EMBEDDING_API_URL:}
+    api-key: ${PORTAL_EMBEDDING_API_KEY:}
+    dimension: ${PORTAL_EMBEDDING_DIMENSION:384}
 
 

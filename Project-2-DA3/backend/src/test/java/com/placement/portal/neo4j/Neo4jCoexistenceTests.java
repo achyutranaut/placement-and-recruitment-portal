@@ -14,8 +14,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -184,6 +186,48 @@ class Neo4jCoexistenceTests {
 
         // Recruiter is forbidden from peer recommendations endpoint entirely
         mockMvc.perform(get("/api/v1/graph/recommendations/STU003"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void testAdminGraphMutationFailsGracefullyWhenDisabled() throws Exception {
+        mockMvc.perform(put("/api/v1/graph/nodes/Application/APP001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"properties\":{\"applicationStatus\":\"OFFERED\"}}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("disabled or unreachable")));
+
+        mockMvc.perform(delete("/api/v1/graph/nodes/Application/APP001"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("disabled or unreachable")));
+
+        mockMvc.perform(post("/api/v1/graph/nodes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"label\":\"Company\",\"properties\":{\"companyName\":\"Test Co\"}}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("disabled or unreachable")));
+    }
+
+    @Test
+    @WithMockUser(roles = "STUDENT")
+    void testStudentCannotMutateGraph() throws Exception {
+        mockMvc.perform(put("/api/v1/graph/nodes/Application/APP001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"properties\":{\"applicationStatus\":\"OFFERED\"}}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(delete("/api/v1/graph/nodes/Application/APP001"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/v1/graph/nodes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"label\":\"Company\"}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/v1/graph/relationships")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fromLabel\":\"Company\",\"fromId\":\"COM001\",\"toLabel\":\"Drive\",\"toId\":\"DRV001\"}"))
                 .andExpect(status().isForbidden());
     }
 }

@@ -23,6 +23,7 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 SHOW_STATUS_ONLY=false
 FORCE_ORACLE_ONLY=false
 STOP_SERVICES=false
+DAEMON_MODE=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -35,6 +36,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --help, -h       Show this help message and exit"
       echo "  --status         Check environment, Oracle container, and ports without starting"
       echo "  --oracle-only    Force disable Neo4j Aura projection (run in Oracle-only mode)"
+      echo "  --daemon, -d     Launch services in the background and detach immediately"
       echo "  --stop           Cleanly stop active portal services belonging to this project"
       echo "  --db oracle      Explicitly specify database engine (Oracle Database 23ai is primary)"
       echo ""
@@ -49,12 +51,20 @@ while [[ $# -gt 0 ]]; do
       echo "  NEO4J_URI              Neo4j Aura cloud URI (e.g. neo4j+s://...databases.neo4j.io)"
       echo "  NEO4J_USERNAME         Neo4j Aura username (default: neo4j)"
       echo "  NEO4J_PASSWORD         Neo4j Aura password"
+      echo "  PORTAL_QDRANT_ENABLED  Enable Qdrant vector search engine (default: true if detected)"
+      echo "  QDRANT_URL             Qdrant HTTP endpoint (default: http://localhost:6333)"
+      echo "  QDRANT_API_KEY         Qdrant API key (optional for local instance)"
+      echo "  QDRANT_COLLECTION      Qdrant collection name (default: placement-semantic-search)"
       echo "  SERVER_PORT            Spring Boot backend HTTP port (default: 8080)"
       echo "  FRONTEND_PORT          React/Vite frontend HTTP port (default: 3001)"
       exit 0
       ;;
     --status)
       SHOW_STATUS_ONLY=true
+      shift
+      ;;
+    --daemon|-d|--detach)
+      DAEMON_MODE=true
       shift
       ;;
     --stop)
@@ -98,6 +108,7 @@ echo "================================================================="
 # ------------------------------------------------------------------------------
 INITIAL_EXPLICIT_VARS=()
 for var in JWT_SECRET PORTAL_NEO4J_ENABLED NEO4J_URI NEO4J_USERNAME NEO4J_PASSWORD \
+           PORTAL_QDRANT_ENABLED QDRANT_URL QDRANT_API_KEY QDRANT_COLLECTION \
            ORACLE_HOST ORACLE_PORT ORACLE_SERVICE ORACLE_USER ORACLE_PASSWORD \
            SERVER_PORT FRONTEND_PORT; do
   if [[ -n "${!var+x}" ]]; then
@@ -147,7 +158,7 @@ load_env_file() {
 }
 
 # Load files in ascending precedence order:
-load_env_file "/Users/achyutranaut/Desktop/projects/student-placement-recruitment-portal/backend/.env" "original backend/.env"
+load_env_file "$DIR/../backend/.env" "root backend/.env"
 load_env_file "$DIR/../.env" "repository root .env"
 load_env_file "$DIR/infrastructure/.env" "infrastructure/.env"
 load_env_file "$DIR/backend/.env" "backend/.env"
@@ -250,19 +261,42 @@ is_neo4j_listening() {
   local host="${1:-localhost}"
   local port="${2:-7687}"
   if command -v nc >/dev/null 2>&1; then
-    nc -z -w 2 "$host" "$port" >/dev/null 2>&1
+    nc -z -G 2 "$host" "$port" 2>/dev/null || nc -z -w 2 "$host" "$port" 2>/dev/null
+  else
+    (echo > "/dev/tcp/$host/$port") >/dev/null 2>&1
+  fi
+}
+
+# Qdrant Vector DB Helper
+is_qdrant_listening() {
+  local host="${1:-localhost}"
+  local port="${2:-6333}"
+  if command -v nc >/dev/null 2>&1; then
+    nc -z -G 2 "$host" "$port" 2>/dev/null || nc -z -w 2 "$host" "$port" 2>/dev/null
   else
     (echo > "/dev/tcp/$host/$port") >/dev/null 2>&1
   fi
 }
 
 # Resolve Neo4j dual-database configuration
-if [[ "$FORCE_ORACLE_ONLY" == "true" ]]; then
+if [[ "$FORCE_ORACLE_ONLY" == "true" || "${PORTAL_NEO4J_ENABLED:-}" == "false" ]]; then
   export PORTAL_NEO4J_ENABLED="false"
-  export NEO4J_URI=""
-  export NEO4J_USERNAME=""
-  export NEO4J_PASSWORD=""
-elif [[ -n "$NEO4J_URI" && -n "$NEO4J_PASSWORD" ]]; then
+  export NEO4J_URI="${NEO4J_URI:-}"
+  export NEO4J_USERNAME="${NEO4J_USERNAME:-}"
+  export NEO4J_PASSWORD="${NEO4J_PASSWORD:-}"
+elif [[ "${PORTAL_NEO4J_ENABLED:-}" == "true" ]]; then
+  # Neo4j explicitly enabled
+  export PORTAL_NEO4J_ENABLED="true"
+  export NEO4J_URI="${NEO4J_URI:-}"
+  export NEO4J_USERNAME="${NEO4J_USERNAME:-neo4j}"
+  export NEO4J_PASSWORD="${NEO4J_PASSWORD:-}"
+  if [[ -z "$NEO4J_URI" ]]; then
+    echo "[!] WARNING: PORTAL_NEO4J_ENABLED=true but NEO4J_URI is not set."
+  fi
+  if [[ -z "$NEO4J_PASSWORD" ]]; then
+    echo "[!] WARNING: PORTAL_NEO4J_ENABLED=true but NEO4J_PASSWORD is not set."
+  fi
+elif [[ -n "${NEO4J_URI:-}" && -n "${NEO4J_PASSWORD:-}" ]]; then
   # Explicitly configured credentials (e.g. Aura Cloud or custom bolt URI)
   export PORTAL_NEO4J_ENABLED="true"
   export NEO4J_USERNAME="${NEO4J_USERNAME:-neo4j}"
@@ -273,11 +307,31 @@ elif is_neo4j_listening "localhost" "7687" || (command -v docker >/dev/null 2>&1
   export NEO4J_USERNAME="${NEO4J_USERNAME:-neo4j}"
   export NEO4J_PASSWORD="${NEO4J_PASSWORD:-placement2026}"
 else
-  # Default to active local Neo4j configuration so Docker container starts with Oracle
-  export PORTAL_NEO4J_ENABLED="${PORTAL_NEO4J_ENABLED:-true}"
-  export NEO4J_URI="${NEO4J_URI:-bolt://localhost:7687}"
-  export NEO4J_USERNAME="${NEO4J_USERNAME:-neo4j}"
-  export NEO4J_PASSWORD="${NEO4J_PASSWORD:-placement2026}"
+  # Default to disabled if neither cloud credentials nor local container detected
+  export PORTAL_NEO4J_ENABLED="false"
+fi
+
+# Resolve Qdrant Vector Database configuration
+if [[ "${PORTAL_QDRANT_ENABLED:-}" == "false" ]]; then
+  export PORTAL_QDRANT_ENABLED="false"
+  export QDRANT_URL="${QDRANT_URL:-}"
+  export QDRANT_API_KEY="${QDRANT_API_KEY:-}"
+  export QDRANT_COLLECTION="${QDRANT_COLLECTION:-placement-semantic-search}"
+elif [[ "${PORTAL_QDRANT_ENABLED:-}" == "true" ]]; then
+  export PORTAL_QDRANT_ENABLED="true"
+  export QDRANT_URL="${QDRANT_URL:-http://localhost:6333}"
+  export QDRANT_API_KEY="${QDRANT_API_KEY:-}"
+  export QDRANT_COLLECTION="${QDRANT_COLLECTION:-placement-semantic-search}"
+elif [[ -n "${QDRANT_URL:-}" ]]; then
+  export PORTAL_QDRANT_ENABLED="true"
+  export QDRANT_COLLECTION="${QDRANT_COLLECTION:-placement-semantic-search}"
+elif is_qdrant_listening "localhost" "6333" || (command -v docker >/dev/null 2>&1 && docker ps --format '{{.Names}}' 2>/dev/null | grep -q 'portal-qdrant'); then
+  export PORTAL_QDRANT_ENABLED="true"
+  export QDRANT_URL="${QDRANT_URL:-http://localhost:6333}"
+  export QDRANT_API_KEY="${QDRANT_API_KEY:-}"
+  export QDRANT_COLLECTION="${QDRANT_COLLECTION:-placement-semantic-search}"
+else
+  export PORTAL_QDRANT_ENABLED="false"
 fi
 
 # Service Ports
@@ -294,6 +348,16 @@ if [[ "$PORTAL_NEO4J_ENABLED" == "true" ]]; then
 else
   echo "[i] Neo4j graph projection: DISABLED (Oracle Database 23ai is primary)."
   echo "    To connect, run with local Neo4j or set credentials in .env."
+fi
+
+# Evaluate Qdrant Configuration
+QDRANT_STATUS_DESC="Disabled"
+if [[ "$PORTAL_QDRANT_ENABLED" == "true" ]]; then
+  QDRANT_STATUS_DESC="Active ($QDRANT_URL)"
+  echo "[✓] Qdrant vector database is ENABLED: $QDRANT_URL (Collection: $QDRANT_COLLECTION)"
+else
+  echo "[i] Qdrant vector search: DISABLED (Oracle Database 23ai is primary)."
+  echo "    To connect, run with local Qdrant container or set credentials in .env."
 fi
 
 # ------------------------------------------------------------------------------
@@ -387,6 +451,15 @@ if [[ "$SHOW_STATUS_ONLY" == "true" ]]; then
     fi
   else
     echo "   • Neo4j Graph Database: DISABLED (Run without --oracle-only to enable)"
+  fi
+  if [[ "$PORTAL_QDRANT_ENABLED" == "true" ]]; then
+    if is_qdrant_listening localhost 6333; then
+      echo "   • Qdrant Vector DB:   LISTENING (Local $QDRANT_URL, Collection: $QDRANT_COLLECTION)"
+    else
+      echo "   • Qdrant Vector DB:   CONFIGURED ($QDRANT_URL, Collection: $QDRANT_COLLECTION)"
+    fi
+  else
+    echo "   • Qdrant Vector DB:   DISABLED (Set PORTAL_QDRANT_ENABLED=true to enable)"
   fi
 
   echo "   • Backend Service (Port $SERVER_PORT):"
@@ -572,12 +645,7 @@ if [[ "$PORTAL_NEO4J_ENABLED" == "true" ]]; then
       echo "[!] WARNING: Local Neo4j is configured on port 7687 but neither port nor Docker is reachable."
     fi
   else
-    local_aura_host=$(echo "$NEO4J_URI" | sed -E 's|.*://([^:/]+).*|\1|')
-    if [[ -n "$local_aura_host" ]] && is_neo4j_listening "$local_aura_host" 7687; then
-      echo "[✓] Neo4j Aura cloud graph instance is reachable on $SAFE_AURA_URI."
-    else
-      echo "[i] Neo4j Aura cloud endpoint configured: $SAFE_AURA_URI."
-    fi
+    echo "[i] Neo4j Aura cloud endpoint configured: $SAFE_AURA_URI."
   fi
 fi
 
@@ -657,7 +725,11 @@ cleanup() {
   exit 0
 }
 
-trap cleanup INT TERM EXIT
+if [[ "$DAEMON_MODE" == "true" ]]; then
+  trap cleanup INT TERM
+else
+  trap cleanup INT TERM EXIT
+fi
 
 # ------------------------------------------------------------------------------
 # Step 7: Launch or Verify Backend (Spring Boot with Oracle Profile)
@@ -698,7 +770,7 @@ else
   echo "      Log file: $BACKEND_LOG"
 
   # SEC-02: Non-sensitive JVM memory and runtime options (secrets supplied via environment variables)
-  NON_SENSITIVE_JVM_OPTS="${JAVA_OPTS:--Xms256m -Xmx1024m}"
+  NON_SENSITIVE_JVM_OPTS="${JAVA_OPTS:--Xms512m -Xmx2048m}"
 
   (
     cd "$DIR/backend"
@@ -712,6 +784,10 @@ else
     export NEO4J_URI="$NEO4J_URI"
     export NEO4J_USERNAME="$NEO4J_USERNAME"
     export NEO4J_PASSWORD="$NEO4J_PASSWORD"
+    export PORTAL_QDRANT_ENABLED="$PORTAL_QDRANT_ENABLED"
+    export QDRANT_URL="$QDRANT_URL"
+    export QDRANT_API_KEY="$QDRANT_API_KEY"
+    export QDRANT_COLLECTION="$QDRANT_COLLECTION"
     export SERVER_PORT="$SERVER_PORT"
     export CORS_ALLOWED_ORIGINS="$CORS_ALLOWED_ORIGINS"
     export REDIS_HOST="${REDIS_HOST:-localhost}"
@@ -727,7 +803,7 @@ else
 
   echo -n "[*] Waiting for backend to become healthy at http://localhost:$SERVER_PORT/actuator/health"
   BACKEND_HEALTHY=false
-  for _ in {1..75}; do
+  for _ in {1..900}; do
     if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
       echo " FAILED!"
       echo "[!] ERROR: Backend process exited prematurely."
@@ -758,7 +834,7 @@ else
   echo ""
 
   if [[ "$BACKEND_HEALTHY" != "true" ]]; then
-    echo "[!] ERROR: Backend failed to respond healthy within 75 seconds."
+    echo "[!] ERROR: Backend failed to respond healthy within 900 seconds."
     echo "    Last 25 lines of $BACKEND_LOG:"
     echo "-----------------------------------------------------------------"
     tail -n 25 "$BACKEND_LOG" 2>/dev/null || true
@@ -849,13 +925,15 @@ echo "   • Campus Placement Drives:http://localhost:$FRONTEND_PORT/student/dri
 echo "   • Recruiter Portal:       http://localhost:$FRONTEND_PORT/recruiter"
 echo "   • SQL & Cypher Workspace: http://localhost:$FRONTEND_PORT/admin/sql-compiler"
 echo "   • Graph Explorer (Neo4j): http://localhost:$FRONTEND_PORT/graph"
+echo "   • Semantic Vector Search: http://localhost:$FRONTEND_PORT/semantic-search"
 echo "   • Backend REST API:       http://localhost:$SERVER_PORT/api/v1"
 echo "   • Swagger UI API Docs:    http://localhost:$SERVER_PORT/swagger-ui.html"
 echo "   • Spring Actuator Health: http://localhost:$SERVER_PORT/actuator/health"
 echo "================================================================="
 echo "   Active Databases:"
 echo "   • Primary OLTP:    Oracle Database 23ai ($ORACLE_HOST:$ORACLE_PORT/$ORACLE_SERVICE)"
-echo "   • Graph Projection: Neo4j Aura (${AURA_STATUS_DESC})"
+echo "   • Graph Engine:    Neo4j (${AURA_STATUS_DESC})"
+echo "   • Vector Engine:   Qdrant (${QDRANT_STATUS_DESC})"
 echo "================================================================="
 echo "   Demo Personas:"
 echo "   • Student:   25bce1799  / password123 (STU001, Achyut Ranaut)"
@@ -866,6 +944,19 @@ echo "   [i] Press Ctrl+C at any time to cleanly stop portal services."
 echo ""
 
 # Supervise or wait for processes
+if [[ "$DAEMON_MODE" == "true" ]]; then
+  echo "   [✓] Portal services are running in background (detached)."
+  echo "   [✓] To inspect status:  ./run_portal.sh --status"
+  echo "   [✓] To stop services:   ./run_portal.sh --stop"
+  if [[ "$BACKEND_STARTED_BY_SCRIPT" == "true" && -n "$BACKEND_PID" ]]; then
+    disown "$BACKEND_PID" 2>/dev/null || true
+  fi
+  if [[ "$FRONTEND_STARTED_BY_SCRIPT" == "true" && -n "$FRONTEND_PID" ]]; then
+    disown "$FRONTEND_PID" 2>/dev/null || true
+  fi
+  exit 0
+fi
+
 if [[ "$BACKEND_STARTED_BY_SCRIPT" == "true" && "$FRONTEND_STARTED_BY_SCRIPT" == "true" ]]; then
   wait "$BACKEND_PID" "$FRONTEND_PID"
 elif [[ "$BACKEND_STARTED_BY_SCRIPT" == "true" ]]; then
@@ -873,7 +964,7 @@ elif [[ "$BACKEND_STARTED_BY_SCRIPT" == "true" ]]; then
 elif [[ "$FRONTEND_STARTED_BY_SCRIPT" == "true" ]]; then
   wait "$FRONTEND_PID"
 else
-  echo "[i] Both services are actively running. Monitoring processes (Press Ctrl+C to stop)..."
+  echo "[i] Both services are actively running. Monitoring processes [Press Ctrl+C to stop]..."
   while kill -0 "$BACKEND_PID" 2>/dev/null && kill -0 "$FRONTEND_PID" 2>/dev/null; do
     sleep 2
   done

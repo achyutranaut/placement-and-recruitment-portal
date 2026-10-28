@@ -141,32 +141,38 @@ public class TestFixturesInitializer implements CommandLineRunner {
         if (!userRepository.existsByUsername("admin")) {
             userRepository.save(new PortalUser("USR_ADMIN", "admin", passwordEncoder.encode("admin123"), Role.ROLE_ADMIN, "ADMIN01", "Placement Admin", "admin@vit.ac.in"));
         }
-        if (userRepository.count() <= 1) {
-            userRepository.saveAll(List.of(
-                    new PortalUser("USR001", "student1", passwordEncoder.encode("password123"), Role.ROLE_STUDENT, "STU001"),
-                    new PortalUser("USR002", "student2", passwordEncoder.encode("password123"), Role.ROLE_STUDENT, "STU002"),
-                    new PortalUser("USR006", "student4", passwordEncoder.encode("password123"), Role.ROLE_STUDENT, "STU004"),
-                    new PortalUser("USR003", "recruiter1", passwordEncoder.encode("password123"), Role.ROLE_RECRUITER, "COM004", "Vikram Singh", "vikram.singh@microsoft.com"),
-                    new PortalUser("USR004", "recruiter2", passwordEncoder.encode("password123"), Role.ROLE_RECRUITER, "COM001", "Neha Sharma", "neha.sharma@tcs.com"),
-                    new PortalUser("USR_COM002", "infosys_recruiter", passwordEncoder.encode("password123"), Role.ROLE_RECRUITER, "COM002", "Infosys Recruiter", "talent@infosys.com"),
-                    new PortalUser("USR_COM003", "wipro_recruiter", passwordEncoder.encode("password123"), Role.ROLE_RECRUITER, "COM003", "Wipro Recruiter", "careers@wipro.com"),
-                    new PortalUser("USR_COM005", "amazon_recruiter", passwordEncoder.encode("password123"), Role.ROLE_RECRUITER, "COM005", "Amazon Recruiter", "campus-in@amazon.com"),
-                    new PortalUser("USR_COM006", "oracle_recruiter", passwordEncoder.encode("password123"), Role.ROLE_RECRUITER, "COM006", "Oracle Recruiter", "campus_recruitment@oracle.com")
-            ));
+        List<PortalUser> users = List.of(
+                new PortalUser("USR001", "student1", passwordEncoder.encode("password123"), Role.ROLE_STUDENT, "STU001"),
+                new PortalUser("USR002", "student2", passwordEncoder.encode("password123"), Role.ROLE_STUDENT, "STU002"),
+                new PortalUser("USR006", "student4", passwordEncoder.encode("password123"), Role.ROLE_STUDENT, "STU004"),
+                new PortalUser("USR003", "recruiter1", passwordEncoder.encode("password123"), Role.ROLE_RECRUITER, "COM004", "Vikram Singh", "vikram.singh@microsoft.com"),
+                new PortalUser("USR004", "recruiter2", passwordEncoder.encode("password123"), Role.ROLE_RECRUITER, "COM001", "Neha Sharma", "neha.sharma@tcs.com"),
+                new PortalUser("USR_COM002", "infosys_recruiter", passwordEncoder.encode("password123"), Role.ROLE_RECRUITER, "COM002", "Infosys Recruiter", "talent@infosys.com"),
+                new PortalUser("USR_COM003", "wipro_recruiter", passwordEncoder.encode("password123"), Role.ROLE_RECRUITER, "COM003", "Wipro Recruiter", "careers@wipro.com"),
+                new PortalUser("USR_COM005", "amazon_recruiter", passwordEncoder.encode("password123"), Role.ROLE_RECRUITER, "COM005", "Amazon Recruiter", "campus-in@amazon.com"),
+                new PortalUser("USR_COM006", "oracle_recruiter", passwordEncoder.encode("password123"), Role.ROLE_RECRUITER, "COM006", "Oracle Recruiter", "campus_recruitment@oracle.com")
+        );
+        for (PortalUser u : users) {
+            if (!userRepository.existsByUsername(u.getUsername())) {
+                userRepository.save(u);
+            }
         }
     }
 
     private void seedRecruiterCompanies() {
-        if (recruiterCompanyRepository.count() == 0) {
-            recruiterCompanyRepository.saveAll(List.of(
-                    new RecruiterCompany("USR003", "COM004"),
-                    new RecruiterCompany("USR003", "COM001"),
-                    new RecruiterCompany("USR004", "COM001"),
-                    new RecruiterCompany("USR_COM002", "COM002"),
-                    new RecruiterCompany("USR_COM003", "COM003"),
-                    new RecruiterCompany("USR_COM005", "COM005"),
-                    new RecruiterCompany("USR_COM006", "COM006")
-            ));
+        List<RecruiterCompany> rcs = List.of(
+                new RecruiterCompany("USR003", "COM004"),
+                new RecruiterCompany("USR003", "COM001"),
+                new RecruiterCompany("USR004", "COM001"),
+                new RecruiterCompany("USR_COM002", "COM002"),
+                new RecruiterCompany("USR_COM003", "COM003"),
+                new RecruiterCompany("USR_COM005", "COM005"),
+                new RecruiterCompany("USR_COM006", "COM006")
+        );
+        for (RecruiterCompany rc : rcs) {
+            if (!recruiterCompanyRepository.existsByUserIdAndCompanyId(rc.getUserId(), rc.getCompanyId())) {
+                recruiterCompanyRepository.save(rc);
+            }
         }
     }
 
@@ -214,6 +220,10 @@ public class TestFixturesInitializer implements CommandLineRunner {
     }
 
     private void seedProgramsAndBatches() {
+        if (programRepository.count() == 0) {
+            programRepository.saveAll(com.placement.portal.config.DataInitializer.getLegacyPrograms());
+            programRepository.saveAll(com.placement.portal.config.DataInitializer.getFullCatalog());
+        }
         if (batchRepository.count() == 0) {
             Batch b1 = new Batch("BCE", "BAT001", "Mon-Wed-Fri 09:00-11:00", "Lab 401", LocalDate.of(2025, 8, 1), LocalDate.of(2025, 10, 31));
             Batch b2 = new Batch("BCT", "BAT002", "Tue-Thu-Sat 10:00-12:00", "AI Lab 201", LocalDate.of(2025, 8, 1), LocalDate.of(2025, 11, 30));

@@ -244,7 +244,35 @@ public class Neo4jProjectionService {
             prunedNodes += sc5.nodesDeleted();
             prunedRelationships += sc5.relationshipsDeleted();
 
-            // 4f. Prune Cross-wired/Stale Application Relationships
+            // 4f. Prune Phantom Company Nodes
+            Result rCompPrune = session.run(
+                    "MATCH (c:Company) WHERE NOT c.companyId IN $validCompanyIds DETACH DELETE c",
+                    Map.of("validCompanyIds", new ArrayList<>(validCompanyIds))
+            );
+            SummaryCounters sc6 = rCompPrune.consume().counters();
+            prunedNodes += sc6.nodesDeleted();
+            prunedRelationships += sc6.relationshipsDeleted();
+
+            // 4g. Prune Phantom Drive Nodes
+            Result rDrvPrune = session.run(
+                    "MATCH (d:Drive) WHERE NOT d.driveId IN $validDriveIds DETACH DELETE d",
+                    Map.of("validDriveIds", new ArrayList<>(validDriveIds))
+            );
+            SummaryCounters sc7 = rDrvPrune.consume().counters();
+            prunedNodes += sc7.nodesDeleted();
+            prunedRelationships += sc7.relationshipsDeleted();
+
+            // 4h. Prune Stale HOSTS_DRIVE edges
+            for (PlacementDrive d : drives) {
+                String compId = jobToCompanyId.getOrDefault(d.getJobTitle(), "CMP001");
+                Result rCleanHost = session.run(
+                        "MATCH (c:Company)-[r:HOSTS_DRIVE]->(d:Drive {driveId: $driveId}) WHERE c.companyId <> $ownerCompId DELETE r",
+                        Map.of("driveId", d.getDriveId(), "ownerCompId", compId)
+                );
+                prunedRelationships += rCleanHost.consume().counters().relationshipsDeleted();
+            }
+
+            // 4i. Prune Cross-wired/Stale Application Relationships
             for (Application a : applications) {
                 Result rCleanStu = session.run(
                         "MATCH (s:Student)-[r:SUBMITTED_APPLICATION]->(a:Application {applicationId: $appId}) WHERE s.studentId <> $ownerId DELETE r",
@@ -555,6 +583,24 @@ public class Neo4jProjectionService {
             ));
         } catch (Exception e) {
             log.warn("Non-fatal: Failed to asynchronously project offer acceptance to Neo4j Aura: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Non-blocking projection of Offer Declination into Neo4j.
+     */
+    public void projectOfferDeclined(String offerId, String studentId) {
+        if (!driverService.isEnabled() || !driverService.isConnected()) return;
+        try (Session session = driverService.openSession()) {
+            session.run("""
+                MATCH (off:Offer {offerId: $offerId})
+                SET off.status = 'DECLINED'
+                WITH off
+                MATCH (app:Application)-[:RECEIVED_OFFER]->(off)
+                SET app.status = 'DECLINED'
+            """, Map.of("offerId", offerId));
+        } catch (Exception e) {
+            log.warn("Non-fatal: Failed to asynchronously project offer declination to Neo4j: {}", e.getMessage());
         }
     }
 }

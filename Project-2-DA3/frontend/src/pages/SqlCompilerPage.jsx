@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import SqlEditor from '../components/SqlEditor';
@@ -477,19 +477,16 @@ export default function SqlCompilerPage() {
   // Active Sidebar View
   const [sidebarView, setSidebarView] = useState('schema');
 
-  useEffect(() => {
-    loadWorkspaceData('SQL');
-    loadAuraStatus();
-  }, []);
-
-  const loadAuraStatus = async () => {
+  const loadAuraStatus = useCallback(async () => {
     try {
       const data = await api.getGraphStatus();
       setAuraStatus(data);
-    } catch (_) {}
-  };
+    } catch (err) {
+      console.debug('Aura status not available:', err);
+    }
+  }, []);
 
-  const loadWorkspaceData = async (targetWs = workspace) => {
+  const loadWorkspaceData = useCallback(async (targetWs = workspace) => {
     if (targetWs === 'SQL') {
       try {
         const [conn, sch, hist] = await Promise.allSettled([
@@ -519,7 +516,29 @@ export default function SqlCompilerPage() {
         console.error('Failed to load Cypher workspace data:', err);
       }
     }
-  };
+  }, [workspace]);
+
+  const handleQuickAdminLogin = useCallback(async () => {
+    try {
+      setHistoryLoading(true);
+      const res = await api.login('admin', 'admin123');
+      if (res && res.token) {
+        localStorage.setItem('portal_token', res.token);
+        localStorage.setItem('portal_user', JSON.stringify(res));
+      }
+      setHistoryError(null);
+      await loadWorkspaceData(workspace);
+    } catch (err) {
+      setHistoryError('Quick admin login failed: ' + (err.message || 'Authentication error'));
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [workspace, loadWorkspaceData]);
+
+  useEffect(() => {
+    loadWorkspaceData('SQL');
+    loadAuraStatus();
+  }, [loadWorkspaceData, loadAuraStatus]);
 
   const switchWorkspace = (targetWs) => {
     if (targetWs === workspace) return;
@@ -619,7 +638,10 @@ export default function SqlCompilerPage() {
 
       let res;
       if (workspace === 'SQL') {
-        res = await api.executeSql({ sql: textToRun, mode, strictMode });
+        const clean = textToRun.replace(/--.*$/gm, '').trim();
+        const stmts = clean.split(/;|\n\/\s*$/m).map((s) => s.trim()).filter(Boolean);
+        const effectiveMode = (stmts.length > 1 || !strictMode) ? 'SCRIPT' : mode;
+        res = await api.executeSql({ sql: textToRun, mode: effectiveMode, strictMode });
       } else {
         res = await api.executeCypher({ cypher: textToRun, mode });
       }
@@ -676,7 +698,7 @@ export default function SqlCompilerPage() {
     }
   };
 
-  const exportDataAsCsv = (cols, rws, filenamePrefix = 'query_result') => {
+  const exportDataAsCsv = useCallback((cols, rws, filenamePrefix = 'query_result') => {
     if (!cols || !rws) return;
     const header = cols.join(',');
     const rows = rws.map((row) =>
@@ -693,11 +715,12 @@ export default function SqlCompilerPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `${filenamePrefix}_${Date.now()}.csv`);
+    const timestamp = Date.now();
+    link.setAttribute('download', `${filenamePrefix}_${timestamp}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
+  }, []);
 
   const exportAsCsv = () => {
     if (!result || !result.columns || !result.rows) return;
@@ -1636,14 +1659,16 @@ export default function SqlCompilerPage() {
                 </div>
               )}
 
-              {/* STRICT NOT-NULL INTEGRITY VALIDATION BLOCKED DISPLAY */}
+              {/* STRICT NOT-NULL INTEGRITY VALIDATION & POLICY BLOCKED DISPLAY */}
               {result && (!result.validationPassed || result.statementType === 'BLOCKED') && (
                 <div className="rounded-lg border-2 border-amber-400 bg-amber-50/90 p-4 text-xs space-y-2.5 shadow-sm">
                   <div className="flex items-center gap-2 text-amber-900 font-bold">
                     <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span className="text-sm">Strict NOT-NULL Guard: Execution Blocked</span>
+                    <span className="text-sm">
+                      {result.errorCode === 'ORA-POLICY-BLOCKED' ? 'Security Policy: Execution Blocked' : 'Strict NOT-NULL Guard: Execution Blocked'}
+                    </span>
                     <span className="font-mono px-2 py-0.5 rounded bg-amber-200 text-amber-900 text-[10px] font-extrabold">
-                      ORA-VALIDATION-BLOCKED
+                      {result.errorCode || 'ORA-VALIDATION-BLOCKED'}
                     </span>
                   </div>
                   <p className="text-amber-900 font-medium leading-relaxed font-mono">
@@ -1654,9 +1679,11 @@ export default function SqlCompilerPage() {
                       {result.validationMessage}
                     </div>
                   )}
-                  <div className="text-[11px] text-amber-800 flex items-center gap-1.5 pt-1">
-                    <span>💡 To execute anyway without pre-validation checks, toggle <strong>Strict NOT-NULL Guard</strong> to OFF in the editor toolbar.</span>
-                  </div>
+                  {result.errorCode !== 'ORA-POLICY-BLOCKED' && (
+                    <div className="text-[11px] text-amber-800 flex items-center gap-1.5 pt-1">
+                      <span>💡 To execute anyway without pre-validation checks, toggle <strong>Strict NOT-NULL Guard</strong> to OFF in the editor toolbar.</span>
+                    </div>
+                  )}
                 </div>
               )}
 

@@ -138,6 +138,16 @@ export default function Navbar() {
                 >
                   Graph Analytics
                 </Link>
+                <Link
+                  to="/semantic-search"
+                  className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    location.pathname === '/semantic-search'
+                      ? 'bg-indigo-50 text-indigo-800 font-semibold border border-indigo-200'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  Vector Search
+                </Link>
               </>
             )}
 
@@ -152,6 +162,16 @@ export default function Navbar() {
                   }`}
                 >
                   Candidate Tracking
+                </Link>
+                <Link
+                  to="/semantic-search"
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    location.pathname === '/semantic-search'
+                      ? 'bg-indigo-50 text-indigo-800 font-semibold border border-indigo-200'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  Vector Search
                 </Link>
               </>
             )}
@@ -187,6 +207,16 @@ export default function Navbar() {
                   }`}
                 >
                   Graph Visualizer
+                </Link>
+                <Link
+                  to="/semantic-search"
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    location.pathname === '/semantic-search'
+                      ? 'bg-indigo-700 text-white font-semibold'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
+                  Vector Search
                 </Link>
               </>
             )}

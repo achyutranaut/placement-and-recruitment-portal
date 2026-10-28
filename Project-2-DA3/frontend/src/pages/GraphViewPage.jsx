@@ -1079,6 +1079,7 @@ export default function GraphViewPage() {
       await api.updateGraphEntity(selectedNodeInfo.nodeType, selectedNodeInfo.id, editProps);
       showToast(`Properties for [${selectedNodeInfo.id}] successfully updated!`, 'success');
       setShowEditModal(false);
+      setSelectedNodeInfo((prev) => (prev ? { ...prev, details: { ...prev.details, ...editProps } } : null));
       await loadGraphData();
     } catch (err) {
       showToast(err.message || 'Failed to update node', 'error');
@@ -2299,7 +2300,7 @@ export default function GraphViewPage() {
                     </label>
                     <input
                       type="text"
-                      value={typeof val === 'object' ? JSON.stringify(val) : String(val)}
+                      value={val === null || val === undefined ? '' : typeof val === 'object' ? JSON.stringify(val) : String(val)}
                       onChange={(e) => setEditProps({ ...editProps, [key]: e.target.value })}
                       className="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono text-xs"
                     />

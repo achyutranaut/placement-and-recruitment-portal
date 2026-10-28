@@ -49,6 +49,24 @@ public class StudentRegisterRequest {
 
     public StudentRegisterRequest() {}
 
+    public StudentRegisterRequest(String name, String email, String registrationNo, String branch, String programId,
+                                  String password, BigDecimal cgpa, LocalDate dob, String phone, String street,
+                                  String city, String state, List<String> skills) {
+        this.name = name;
+        this.email = email;
+        this.registrationNo = registrationNo;
+        this.branch = branch;
+        this.programId = programId;
+        this.password = password;
+        this.cgpa = cgpa;
+        this.dob = dob;
+        this.phone = phone;
+        this.street = street;
+        this.city = city;
+        this.state = state;
+        this.skills = skills;
+    }
+
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 

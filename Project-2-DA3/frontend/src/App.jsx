@@ -19,6 +19,7 @@ import RecruiterSelectCompanyPage from './pages/RecruiterSelectCompanyPage';
 import AdminPortal from './pages/AdminPortal';
 import SqlCompilerPage from './pages/SqlCompilerPage';
 import GraphViewPage from './pages/GraphViewPage';
+import SemanticSearchPage from './pages/SemanticSearchPage';
 
 export function ProtectedRoute({ children, allowedRoles }) {
   const auth = useAuth();
@@ -185,6 +186,16 @@ export default function App() {
               <ProtectedRoute allowedRoles={['ROLE_STUDENT', 'ROLE_ADMIN', 'ROLE_RECRUITER']}>
                 <MainLayout>
                   <GraphViewPage />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/semantic-search"
+            element={
+              <ProtectedRoute allowedRoles={['ROLE_STUDENT', 'ROLE_ADMIN', 'ROLE_RECRUITER']}>
+                <MainLayout>
+                  <SemanticSearchPage />
                 </MainLayout>
               </ProtectedRoute>
             }

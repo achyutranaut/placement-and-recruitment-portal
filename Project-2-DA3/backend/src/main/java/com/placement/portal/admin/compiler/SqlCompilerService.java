@@ -96,9 +96,8 @@ public class SqlCompilerService {
     }
 
     /**
-     * Executes SQL query in the demo SQL editor.
-     * Enforces strict server-side read-only policy: allows only a single read-only SELECT or safe CTE statement.
-     * Rejects DML, DDL, PL/SQL, multiple statements, and validation bypass attempts regardless of request parameters.
+     * Executes SQL statements in either QUERY mode (single statement) or SCRIPT mode (multi-statement script).
+     * Honors the strictMode flag (Strict NOT-NULL Guard toggle).
      */
     public SqlExecuteResponseDto execute(SqlExecuteRequestDto request) {
         if (request == null || request.getSql() == null || request.getSql().trim().isEmpty()) {
@@ -107,9 +106,31 @@ public class SqlCompilerService {
 
         String rawSql = request.getSql().trim();
         String currentAdmin = getCurrentAdminId();
+        String mode = request.getMode() != null ? request.getMode().trim().toUpperCase(Locale.ROOT) : "QUERY";
+        boolean strictMode = request.isStrictMode();
 
-        // 1. Enforce strict server-side read-only policy
-        SqlReadOnlyValidator.ValidationResult valResult = SqlReadOnlyValidator.validate(rawSql);
+        List<String> statements = SqlScriptParser.splitScript(rawSql);
+        if (statements.isEmpty()) {
+            return SqlExecuteResponseDto.errorResult("ORA-EMPTY", "No executable statement found", "No executable statement found", null, null, 0);
+        }
+
+        // When in strict QUERY mode with multiple statements, block to enforce single-statement discipline
+        if ("QUERY".equalsIgnoreCase(mode) && strictMode && statements.size() > 1) {
+            String msg = "Execution blocked: Multiple statements are not permitted in the SQL editor. Only a single read-only SELECT statement is allowed.";
+            logAudit(currentAdmin, "BLOCKED", rawSql, "BLOCKED", 0, 0, 0, "ORA-POLICY-BLOCKED", msg);
+            SqlExecuteResponseDto blockedDto = SqlExecuteResponseDto.blockedResult(msg, msg, rawSql);
+            blockedDto.setErrorCode("ORA-POLICY-BLOCKED");
+            return blockedDto;
+        }
+
+        // Execute as multi-statement script if explicitly requested or if multiple statements are present (when not in strict QUERY mode)
+        if (statements.size() > 1 || "SCRIPT".equalsIgnoreCase(mode)) {
+            return executeScript(statements, rawSql, currentAdmin, strictMode);
+        }
+
+        // Single statement execution
+        String singleStmt = statements.get(0);
+        SqlReadOnlyValidator.ValidationResult valResult = SqlReadOnlyValidator.validate(singleStmt);
         if (!valResult.passed()) {
             logAudit(currentAdmin, "BLOCKED", rawSql, "BLOCKED", 0, 0, 0, "ORA-POLICY-BLOCKED", valResult.errorMessage());
             SqlExecuteResponseDto blockedDto = SqlExecuteResponseDto.blockedResult(valResult.errorMessage(), valResult.errorMessage(), rawSql);
@@ -117,8 +138,144 @@ public class SqlCompilerService {
             return blockedDto;
         }
 
-        // 2. Execute as a single read-only SELECT statement
-        return executeReadOnlyQuery(rawSql, currentAdmin);
+        return executeReadOnlyQuery(singleStmt, currentAdmin);
+    }
+
+    /**
+     * Executes a multi-statement script sequentially within a managed connection.
+     */
+    private SqlExecuteResponseDto executeScript(List<String> statements, String rawScript, String currentAdmin, boolean strictMode) {
+        long totalStart = System.currentTimeMillis();
+        List<SqlExecuteResponseDto> results = new ArrayList<>();
+        StringBuilder combinedDbms = new StringBuilder();
+
+        try (Connection conn = dataSource.getConnection()) {
+            try {
+                conn.setReadOnly(true);
+            } catch (Exception ignored) {}
+            conn.setAutoCommit(false);
+            enableDbmsOutput(conn);
+
+            for (String rawStmt : statements) {
+                String stmtSql = SqlScriptParser.cleanStatement(rawStmt, false);
+                if (stmtSql.isEmpty()) continue;
+
+                long stmtStart = System.currentTimeMillis();
+
+                SqlReadOnlyValidator.ValidationResult valResult = SqlReadOnlyValidator.validate(stmtSql);
+                if (!valResult.passed()) {
+                    SqlExecuteResponseDto blockedDto = SqlExecuteResponseDto.blockedResult(valResult.errorMessage(), valResult.errorMessage(), stmtSql);
+                    blockedDto.setErrorCode("ORA-POLICY-BLOCKED");
+                    blockedDto.setTransactionState("NONE");
+                    results.add(blockedDto);
+                    logAudit(currentAdmin, "BLOCKED", stmtSql, "BLOCKED", 0, 0, 0, "ORA-POLICY-BLOCKED", valResult.errorMessage());
+                    break;
+                }
+
+                try (Statement stmt = conn.createStatement()) {
+                    stmt.setQueryTimeout(10);
+                    stmt.setMaxRows(MAX_SELECT_ROWS);
+
+                    boolean isSelect = isSelectQuery(stmtSql);
+                    if (isSelect) {
+                        try (ResultSet rs = stmt.executeQuery(stmtSql)) {
+                            long elapsed = System.currentTimeMillis() - stmtStart;
+                            ResultSetMetaData meta = rs.getMetaData();
+                            int colCount = meta.getColumnCount();
+                            List<String> columns = new ArrayList<>();
+                            for (int i = 1; i <= colCount; i++) {
+                                columns.add(meta.getColumnLabel(i));
+                            }
+                            List<List<Object>> rows = new ArrayList<>();
+                            int count = 0;
+                            while (rs.next() && count < MAX_SELECT_ROWS) {
+                                List<Object> row = new ArrayList<>();
+                                for (int i = 1; i <= colCount; i++) {
+                                    row.add(formatValue(rs, i, meta.getColumnType(i)));
+                                }
+                                rows.add(row);
+                                count++;
+                            }
+                            String out = drainDbmsOutput(conn);
+                            if (out != null && !out.isEmpty()) {
+                                combinedDbms.append(out).append("\n");
+                            }
+                            SqlExecuteResponseDto stmtResult = SqlExecuteResponseDto.selectResult(columns, rows, count, out, elapsed);
+                            stmtResult.setSql(stmtSql);
+                            stmtResult.setTransactionState("NONE");
+                            results.add(stmtResult);
+                            logAudit(currentAdmin, "SELECT", stmtSql, "SUCCESS", 0, count, elapsed, null, null);
+                        }
+                    } else {
+                        boolean hasRs = stmt.execute(stmtSql);
+                        long elapsed = System.currentTimeMillis() - stmtStart;
+                        String out = drainDbmsOutput(conn);
+                        if (out != null && !out.isEmpty()) {
+                            combinedDbms.append(out).append("\n");
+                        }
+                        if (hasRs) {
+                            try (ResultSet rs = stmt.getResultSet()) {
+                                ResultSetMetaData meta = rs.getMetaData();
+                                int colCount = meta.getColumnCount();
+                                List<String> columns = new ArrayList<>();
+                                for (int i = 1; i <= colCount; i++) {
+                                    columns.add(meta.getColumnLabel(i));
+                                }
+                                List<List<Object>> rows = new ArrayList<>();
+                                int count = 0;
+                                while (rs.next() && count < MAX_SELECT_ROWS) {
+                                    List<Object> row = new ArrayList<>();
+                                    for (int i = 1; i <= colCount; i++) {
+                                        row.add(formatValue(rs, i, meta.getColumnType(i)));
+                                    }
+                                    rows.add(row);
+                                    count++;
+                                }
+                                SqlExecuteResponseDto stmtResult = SqlExecuteResponseDto.selectResult(columns, rows, count, out, elapsed);
+                                stmtResult.setSql(stmtSql);
+                                stmtResult.setTransactionState("NONE");
+                                results.add(stmtResult);
+                                logAudit(currentAdmin, "SELECT", stmtSql, "SUCCESS", 0, count, elapsed, null, null);
+                            }
+                        } else {
+                            int updateCount = stmt.getUpdateCount();
+                            String upper = stmtSql.replaceAll("--.*", "").trim().toUpperCase(Locale.ROOT);
+                            String type = upper.split("\\s+")[0];
+                            SqlExecuteResponseDto stmtResult = SqlExecuteResponseDto.dmlResult(type, Math.max(updateCount, 0), out, elapsed);
+                            stmtResult.setSql(stmtSql);
+                            stmtResult.setTransactionState("COMMITTED");
+                            results.add(stmtResult);
+                            logAudit(currentAdmin, type, stmtSql, "SUCCESS", Math.max(updateCount, 0), 0, elapsed, null, null);
+                        }
+                    }
+                } catch (SQLException e) {
+                    long elapsed = System.currentTimeMillis() - stmtStart;
+                    String errorMsg = e.getMessage() != null ? e.getMessage() : "SQL execution error";
+                    SqlExecuteResponseDto errDto = SqlExecuteResponseDto.errorResult("ORA-" + e.getErrorCode(), errorMsg, errorMsg, null, null, elapsed);
+                    errDto.setSql(stmtSql);
+                    results.add(errDto);
+                    logAudit(currentAdmin, "ERROR", stmtSql, "ERROR", 0, 0, elapsed, String.valueOf(e.getErrorCode()), errorMsg);
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            return SqlExecuteResponseDto.errorResult("SCRIPT_ERROR", e.getMessage(), e.getMessage(), null, null, System.currentTimeMillis() - totalStart);
+        }
+
+        long totalElapsed = System.currentTimeMillis() - totalStart;
+        SqlExecuteResponseDto scriptDto = SqlExecuteResponseDto.scriptResult(results, totalElapsed, combinedDbms.toString().trim());
+
+        // Find last SELECT query results to populate root columns/rows for default grid viewing
+        for (int i = results.size() - 1; i >= 0; i--) {
+            SqlExecuteResponseDto r = results.get(i);
+            if (r.getColumns() != null && !r.getColumns().isEmpty()) {
+                scriptDto.setColumns(r.getColumns());
+                scriptDto.setRows(r.getRows());
+                scriptDto.setRowCount(r.getRowCount());
+                break;
+            }
+        }
+        return scriptDto;
     }
 
     /**

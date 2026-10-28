@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 // Reusable Metric Card (Phase 5.2)
 export function MetricCard({ title, value, subtitle, icon: Icon, color = 'indigo', trend, note }) {
@@ -102,6 +102,39 @@ export function BarChart({ data = [], xKey = 'name', yKey = 'value', unit = '', 
   );
 }
 
+const DEFAULT_DONUT_COLORS = [
+  '#2563eb', // blue-600
+  '#7c3aed', // violet-600
+  '#059669', // emerald-600
+  '#d97706', // amber-600
+  '#0891b2', // cyan-600
+  '#db2777', // pink-600
+  '#4f46e5', // indigo-600
+  '#e11d48', // rose-600
+  '#64748b', // slate-500
+];
+
+function computeDonutSlices(data, total, circumference, defaultColors = DEFAULT_DONUT_COLORS) {
+  const slices = [];
+  let currentAngle = 0;
+  const list = data || [];
+  for (let idx = 0; idx < list.length; idx++) {
+    const item = list[idx];
+    const val = Number(item.value) || 0;
+    if (val <= 0) continue;
+    const sliceFraction = val / total;
+    slices.push({
+      item,
+      idx,
+      strokeDasharray: `${sliceFraction * circumference} ${circumference}`,
+      strokeDashoffset: -currentAngle * circumference,
+      color: item.color || defaultColors[idx % defaultColors.length],
+    });
+    currentAngle += sliceFraction;
+  }
+  return slices;
+}
+
 // Custom SVG Donut / Pie Chart (Phase 6.2 Application Pipeline & 6.3 Branch Share)
 export function DonutChart({
   data = [],
@@ -114,19 +147,11 @@ export function DonutChart({
   const total = rawTotal > 0 ? rawTotal : 1;
   const radius = size / 2 - 20;
   const circumference = 2 * Math.PI * radius;
-  let accumulatedAngle = 0;
 
-  const defaultColors = [
-    '#2563eb', // blue-600
-    '#7c3aed', // violet-600
-    '#059669', // emerald-600
-    '#d97706', // amber-600
-    '#0891b2', // cyan-600
-    '#db2777', // pink-600
-    '#4f46e5', // indigo-600
-    '#e11d48', // rose-600
-    '#64748b', // slate-500
-  ];
+  const slices = useMemo(
+    () => computeDonutSlices(data, total, circumference, DEFAULT_DONUT_COLORS),
+    [data, total, circumference]
+  );
 
   if (!data || data.length === 0 || rawTotal === 0) {
     return (
@@ -150,27 +175,21 @@ export function DonutChart({
             stroke="#f1f5f9"
             strokeWidth="24"
           />
-          {data.map((item, idx) => {
-            const val = Number(item.value) || 0;
-            if (val <= 0) return null;
-            const sliceFraction = val / total;
-            const strokeDasharray = `${sliceFraction * circumference} ${circumference}`;
-            const strokeDashoffset = -accumulatedAngle * circumference;
-            accumulatedAngle += sliceFraction;
-            const isHovered = hoveredIdx === idx;
+          {slices.map((slice) => {
+            const isHovered = hoveredIdx === slice.idx;
 
             return (
               <circle
-                key={idx}
+                key={slice.idx}
                 cx={size / 2}
                 cy={size / 2}
                 r={radius}
                 fill="transparent"
-                stroke={item.color || defaultColors[idx % defaultColors.length]}
+                stroke={slice.color}
                 strokeWidth={isHovered ? 28 : 24}
-                strokeDasharray={strokeDasharray}
-                strokeDashoffset={strokeDashoffset}
-                onMouseEnter={() => setHoveredIdx(idx)}
+                strokeDasharray={slice.strokeDasharray}
+                strokeDashoffset={slice.strokeDashoffset}
+                onMouseEnter={() => setHoveredIdx(slice.idx)}
                 onMouseLeave={() => setHoveredIdx(null)}
                 className="transition-all duration-300 cursor-pointer"
                 style={{ opacity: hoveredIdx !== null && !isHovered ? 0.6 : 1 }}
@@ -209,7 +228,7 @@ export function DonutChart({
               <div className="flex items-center gap-2 min-w-0">
                 <span
                   className="w-2.5 h-2.5 rounded-full shrink-0"
-                  style={{ backgroundColor: item.color || defaultColors[idx % defaultColors.length] }}
+                  style={{ backgroundColor: item.color || DEFAULT_DONUT_COLORS[idx % DEFAULT_DONUT_COLORS.length] }}
                 />
                 <span className="text-slate-700 truncate font-medium">{item.name}</span>
               </div>

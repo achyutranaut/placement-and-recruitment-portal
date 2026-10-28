@@ -36,7 +36,7 @@ public class ReportJdbcDao {
         } catch (Exception e) {
             log.warn("PL/SQL function GET_PLACEMENT_RATE not available in dialect. Calculating via SQL query.");
             Integer total = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM STUDENT", Integer.class);
-            Integer placed = jdbcTemplate.queryForObject("SELECT COUNT(DISTINCT a.Student_Id) FROM OFFER_LETTER ol JOIN APPLICATION a ON ol.Application_Id = a.Application_Id", Integer.class);
+            Integer placed = jdbcTemplate.queryForObject("SELECT COUNT(DISTINCT a.Student_Id) FROM OFFER_LETTER ol JOIN APPLICATION a ON ol.Application_Id = a.Application_Id WHERE (ol.Status IS NULL OR UPPER(ol.Status) != 'DECLINED')", Integer.class);
             if (total != null && total > 0 && placed != null) {
                 return Math.round(((double) placed / total * 100.0) * 100.0) / 100.0;
             }
@@ -59,7 +59,7 @@ public class ReportJdbcDao {
             });
         } catch (Exception e) {
             log.warn("PL/SQL function GET_AVERAGE_PACKAGE not available in dialect. Calculating via SQL query.");
-            Double avg = jdbcTemplate.queryForObject("SELECT NVL(ROUND(AVG(CTC_LPA), 2), 0) FROM OFFER_LETTER", Double.class);
+            Double avg = jdbcTemplate.queryForObject("SELECT NVL(ROUND(AVG(CTC_LPA), 2), 0) FROM OFFER_LETTER WHERE (Status IS NULL OR UPPER(Status) != 'DECLINED')", Double.class);
             return avg != null ? avg : 0.0;
         }
     }
@@ -102,6 +102,7 @@ public class ReportJdbcDao {
             JOIN JOB_COMPANY jc ON d.Job_Title = jc.Job_Title
             JOIN COMPANY c ON jc.Company_Id = c.Company_Id
             JOIN EMAIL_COMPANY ec ON c.Email = ec.Email
+            WHERE (ol.Status IS NULL OR UPPER(ol.Status) != 'DECLINED')
             GROUP BY ec.Company_Name, c.Industry
             ORDER BY AVERAGE_CTC DESC
         """;

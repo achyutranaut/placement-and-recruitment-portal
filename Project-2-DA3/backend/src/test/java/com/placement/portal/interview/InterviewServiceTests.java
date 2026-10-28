@@ -148,4 +148,35 @@ class InterviewServiceTests {
 
         assertTrue(ex.getMessage().contains("Invalid interview result status"));
     }
+
+    @Test
+    void testScheduleInterviewFlagNormalization() {
+        assertEquals("Y", ScheduleInterviewDto.normalizeFlag(true, "Y"));
+        assertEquals("Y", ScheduleInterviewDto.normalizeFlag("true", "Y"));
+        assertEquals("Y", ScheduleInterviewDto.normalizeFlag("Y", "N"));
+        assertEquals("Y", ScheduleInterviewDto.normalizeFlag("online", "N"));
+        assertEquals("N", ScheduleInterviewDto.normalizeFlag(false, "Y"));
+        assertEquals("N", ScheduleInterviewDto.normalizeFlag("false", "Y"));
+        assertEquals("N", ScheduleInterviewDto.normalizeFlag("N", "Y"));
+        assertEquals("N", ScheduleInterviewDto.normalizeFlag("offline", "Y"));
+        assertEquals("Y", ScheduleInterviewDto.normalizeFlag(null, "Y"));
+        assertEquals("N", ScheduleInterviewDto.normalizeFlag(null, "N"));
+
+        assertEquals("Y", InterviewJdbcDao.normalizeFlag("true", "Y"));
+        assertEquals("N", InterviewJdbcDao.normalizeFlag("false", "N"));
+    }
+
+    @Test
+    void testScheduleInterviewSavesWithNormalizedFlags() {
+        // App001 exists and is in APPLIED/SHORTLISTED
+        ScheduleInterviewDto dto = new ScheduleInterviewDto("APP001", "Dr. Rajesh Sundaram", "true", "false");
+        assertEquals("Y", dto.getOnline());
+        assertEquals("N", dto.getOffline());
+
+        interviewService.scheduleInterview(dto);
+
+        Interview iv = interviewRepository.findById(new Interview.InterviewId("APP001", "Dr. Rajesh Sundaram")).orElseThrow();
+        assertEquals("Y", iv.getOnline());
+        assertEquals("N", iv.getOffline());
+    }
 }

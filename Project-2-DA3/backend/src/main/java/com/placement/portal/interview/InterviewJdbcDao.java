@@ -17,10 +17,25 @@ public class InterviewJdbcDao {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    public static String normalizeFlag(String val, String defaultVal) {
+        if (val == null || val.isBlank()) return defaultVal;
+        String s = val.trim();
+        if (s.equalsIgnoreCase("true") || s.equalsIgnoreCase("y") || s.equalsIgnoreCase("yes") || s.equalsIgnoreCase("online") || s.equals("1")) {
+            return "Y";
+        }
+        if (s.equalsIgnoreCase("false") || s.equalsIgnoreCase("n") || s.equalsIgnoreCase("no") || s.equalsIgnoreCase("offline") || s.equals("0")) {
+            return "N";
+        }
+        return defaultVal;
+    }
+
     /**
      * Executes Oracle Stored Procedure: SCHEDULE_INTERVIEW
      */
     public void scheduleInterview(String applicationId, String interviewerName, String online, String offline) {
+        final String normOnline = normalizeFlag(online, "Y");
+        final String normOffline = normalizeFlag(offline, "N");
+
         jdbcTemplate.execute((java.sql.Connection conn) -> {
             boolean isOracle = conn.getMetaData().getDatabaseProductName().toLowerCase().contains("oracle");
 
@@ -28,8 +43,8 @@ public class InterviewJdbcDao {
                 try (CallableStatement cs = conn.prepareCall("{call SCHEDULE_INTERVIEW(?, ?, ?, ?)}")) {
                     cs.setString(1, applicationId);
                     cs.setString(2, interviewerName);
-                    cs.setString(3, online != null ? online : "Y");
-                    cs.setString(4, offline != null ? offline : "N");
+                    cs.setString(3, normOnline);
+                    cs.setString(4, normOffline);
                     cs.execute();
                     log.info("Oracle PL/SQL SCHEDULE_INTERVIEW executed for app: {}", applicationId);
                     return null;
@@ -37,7 +52,7 @@ public class InterviewJdbcDao {
             } else {
                 jdbcTemplate.update(
                         "INSERT INTO INTERVIEW (Application_Id, Interviewer_Name, Result, \"ONLINE\", \"OFFLINE\") VALUES (?, ?, 'PENDING', ?, ?)",
-                        applicationId, interviewerName, online != null ? online : "Y", offline != null ? offline : "N"
+                        applicationId, interviewerName, normOnline, normOffline
                 );
                 jdbcTemplate.update(
                         "UPDATE APPLICATION SET Status = 'INTERVIEWING' WHERE Application_Id = ?",

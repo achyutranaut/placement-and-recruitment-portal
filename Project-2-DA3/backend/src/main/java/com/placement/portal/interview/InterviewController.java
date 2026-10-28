@@ -80,17 +80,15 @@ public class InterviewController {
             Principal principal
     ) {
         if (principal != null) {
-            var userOpt = userRepository.findByUsername(principal.getName());
-            if (userOpt.isPresent()) {
-                PortalUser user = userOpt.get();
-                if (user.getRole() == Role.ROLE_STUDENT) {
-                    Application app = applicationRepository.findById(applicationId).orElse(null);
-                    if (app != null && (user.getReferenceId() == null || !user.getReferenceId().equalsIgnoreCase(app.getStudentId()))) {
-                        throw new AccessDeniedException("Access denied: You may only view interviews for your own applications.");
-                    }
-                } else if (user.getRole() == Role.ROLE_RECRUITER) {
-                    recruiterAuthService.requireAuthorizedForApplication(principal, applicationId);
+            PortalUser user = userRepository.findByUsername(principal.getName())
+                    .orElseThrow(() -> new AccessDeniedException("Access denied: User not found."));
+            if (user.getRole() == Role.ROLE_STUDENT) {
+                Application app = applicationRepository.findById(applicationId).orElse(null);
+                if (app != null && (user.getReferenceId() == null || !user.getReferenceId().equalsIgnoreCase(app.getStudentId()))) {
+                    throw new AccessDeniedException("Access denied: You may only view interviews for your own applications.");
                 }
+            } else if (user.getRole() == Role.ROLE_RECRUITER) {
+                recruiterAuthService.requireAuthorizedForApplication(principal, applicationId);
             }
         }
         return ResponseEntity.ok(ApiResponse.ok(interviewService.getInterviewsByApplication(applicationId)));
